@@ -17,8 +17,8 @@ COPY . .
 # Build application
 RUN npm run build
 
-# Verify build output exists
-RUN ls -la /app/dist/ && test -f /app/dist/main.js || (echo "Build failed: dist/main.js not found" && exit 1)
+# Verify build output exists (check both possible locations)
+RUN ls -la /app/dist/ && (test -f /app/dist/main.js || test -f /app/dist/src/main.js) || (echo "Build failed: main.js not found in dist/ or dist/src/" && exit 1)
 
 # Stage 2: Production
 FROM node:20-alpine AS production
@@ -57,5 +57,5 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
 # Use dumb-init to handle signals properly
 ENTRYPOINT ["dumb-init", "--"]
 
-# Start application
-CMD ["node", "dist/main.js"]
+# Start application (try dist/main.js first, fallback to dist/src/main.js)
+CMD ["sh", "-c", "if [ -f dist/main.js ]; then node dist/main.js; else node dist/src/main.js; fi"]
