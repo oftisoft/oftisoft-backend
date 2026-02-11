@@ -94,7 +94,7 @@ networks:
     driver: bridge
   traefik_network:
     external: true
-    name: www_traefik  # Update this to actual Traefik network name - run: docker inspect pw-traefik --format '{{range $key, $value := .NetworkSettings.Networks}}{{$key}}{{end}}'
+    name: www_web  # Traefik network name
 
 volumes:
   postgres_data:
