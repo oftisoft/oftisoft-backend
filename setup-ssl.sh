@@ -54,6 +54,22 @@ fi
 # Copy HTTP config temporarily
 cp nginx/nginx-http.conf nginx/nginx.conf
 
+# Check if port 80 is available
+if lsof -i :80 > /dev/null 2>&1; then
+    echo "⚠️  Port 80 is already in use!"
+    echo "📋 Options:"
+    echo "   1. Temporarily stop existing service: sudo systemctl stop nginx"
+    echo "   2. Use existing nginx/apache for SSL certificate"
+    echo "   3. Use DNS-01 challenge (no port 80 needed)"
+    echo ""
+    read -p "Do you want to continue? (y/n) " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "SSL setup cancelled. You can configure SSL manually."
+        exit 1
+    fi
+fi
+
 # Start containers (if not running)
 echo "🐳 Starting Docker containers..."
 # For SSL setup, we only need nginx running initially
