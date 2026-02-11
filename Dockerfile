@@ -17,6 +17,9 @@ COPY . .
 # Build application
 RUN npm run build
 
+# Verify build output exists
+RUN ls -la /app/dist/ && test -f /app/dist/main.js || (echo "Build failed: dist/main.js not found" && exit 1)
+
 # Stage 2: Production
 FROM node:20-alpine AS production
 
