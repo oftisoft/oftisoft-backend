@@ -81,7 +81,9 @@ import { AffiliateWithdrawal } from './entities/affiliate-withdrawal.entity';
         username: configService.get('DATABASE_USER'),
         password: configService.get('DATABASE_PASSWORD'),
         database: configService.get('DATABASE_NAME'),
-        ssl: configService.get('DATABASE_SSLMODE') === 'require' ? { rejectUnauthorized: false } : false,
+        ssl: configService.get('DATABASE_SSLMODE') === 'require' 
+          ? { rejectUnauthorized: false } 
+          : false,
         entities: [User, RefreshToken, Ticket, TicketMessage, PaymentMethod, Transaction, SystemConfig, ApiKey, EmailTemplate, Product, UserAsset, DownloadRecord, UpdateNotification, ProductVersion, Favorite, Coupon, Bundle, Message, Conversation, Notification, Order, OrderItem, Category, Project, Quote, PageContent, Lead, Ad, SiteVisit, SiteEvent, Affiliate, AffiliateCommission, AffiliateWithdrawal],
         synchronize: configService.get('NODE_ENV') === 'development',
         logging: false,
