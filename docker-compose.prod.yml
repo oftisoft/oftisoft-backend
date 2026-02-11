@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   nginx:
     image: nginx:alpine
@@ -16,8 +14,6 @@ services:
       - ./logs/nginx:/var/log/nginx
     networks:
       - app-network
-    depends_on:
-      - backend
     command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
 
   certbot:
@@ -29,7 +25,10 @@ services:
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
 
   backend:
-    image: ${DOCKER_USERNAME}/oftisoft-backend:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ${DOCKER_USERNAME:-oftisoft}/oftisoft-backend:latest
     container_name: oftisoft-backend
     restart: unless-stopped
     expose:

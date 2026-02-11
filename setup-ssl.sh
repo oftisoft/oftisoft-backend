@@ -56,7 +56,15 @@ cp nginx/nginx-http.conf nginx/nginx.conf
 
 # Start containers (if not running)
 echo "🐳 Starting Docker containers..."
-$DOCKER_COMPOSE -f docker-compose.prod.yml up -d nginx backend || true
+# For SSL setup, we only need nginx running initially
+# Backend can be started later if DOCKER_USERNAME is not set
+if [ -n "$DOCKER_USERNAME" ] || docker images | grep -q "oftisoft-backend"; then
+    $DOCKER_COMPOSE -f docker-compose.prod.yml up -d nginx backend || $DOCKER_COMPOSE -f docker-compose.prod.yml up -d nginx || true
+else
+    echo "⚠️  DOCKER_USERNAME not set. Starting nginx only for SSL setup..."
+    echo "⚠️  Backend will need to be built/started separately after SSL is configured."
+    $DOCKER_COMPOSE -f docker-compose.prod.yml up -d nginx || true
+fi
 
 # Wait for nginx to be ready
 echo "⏳ Waiting for nginx to be ready..."
