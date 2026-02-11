@@ -13,7 +13,7 @@ services:
       - ./logs/nginx:/var/log/nginx
     networks:
       - app-network
-      - traefik_default  # Connect to Traefik network
+      - traefik_network  # Connect to Traefik network
     extra_hosts:
       - "host.docker.internal:host-gateway"
     labels:
@@ -92,6 +92,9 @@ services:
 networks:
   app-network:
     driver: bridge
+  traefik_network:
+    external: true
+    name: www_traefik  # Update this to actual Traefik network name - run: docker inspect pw-traefik --format '{{range $key, $value := .NetworkSettings.Networks}}{{$key}}{{end}}'
 
 volumes:
   postgres_data:
