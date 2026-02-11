@@ -18,14 +18,21 @@ services:
       - "host.docker.internal:host-gateway"
     labels:
       - "traefik.enable=true"
+      # HTTPS Router
       - "traefik.http.routers.api.rule=Host(`api.oftisoft.com`)"
       - "traefik.http.routers.api.entrypoints=websecure"
       - "traefik.http.routers.api.tls.certresolver=letsencrypt"
       - "traefik.http.routers.api.service=api-backend"
       - "traefik.http.services.api-backend.loadbalancer.server.port=80"
-      - "traefik.http.routers.api-http.rule=Host(`api.oftisoft.com`)"
+      # HTTP Router - Allow ACME challenge before redirecting
+      - "traefik.http.routers.api-http.rule=Host(`api.oftisoft.com`) && !PathPrefix(`/.well-known/acme-challenge`)"
       - "traefik.http.routers.api-http.entrypoints=web"
       - "traefik.http.routers.api-http.middlewares=redirect-to-https"
+      # ACME Challenge Router
+      - "traefik.http.routers.api-acme.rule=Host(`api.oftisoft.com`) && PathPrefix(`/.well-known/acme-challenge`)"
+      - "traefik.http.routers.api-acme.entrypoints=web"
+      - "traefik.http.routers.api-acme.service=api-backend"
+      - "traefik.http.routers.api-acme.priority=1"
     command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
 
   certbot:
