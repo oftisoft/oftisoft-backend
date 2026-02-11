@@ -12,7 +12,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build || (echo "Build failed!" && exit 1)
 RUN ls -la dist/ || (echo "dist directory not found!" && exit 1)
-RUN test -f dist/main.js || (echo "ERROR: dist/main.js not found after build" && ls -la dist/ && exit 1)
+RUN test -f dist/src/main.js || (echo "ERROR: dist/src/main.js not found after build" && ls -la dist/ && exit 1)
 
 FROM base AS runner
 WORKDIR /app
@@ -25,4 +25,4 @@ COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
 RUN ls -la dist/ && echo "Files in dist directory:" && find dist -name "main*" -type f
 USER nestjs
 EXPOSE 5050
-CMD ["node", "dist/main.js"]
+CMD ["node", "dist/src/main.js"]
