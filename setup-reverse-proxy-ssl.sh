@@ -18,23 +18,74 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
-# Detect web server
-if systemctl is-active --quiet nginx; then
-    WEBSERVER="nginx"
-    CONFIG_DIR="/etc/nginx/sites-available"
-    ENABLE_CMD="ln -sf $CONFIG_DIR/api.oftisoft.com /etc/nginx/sites-enabled/"
-    RELOAD_CMD="systemctl reload nginx"
-    TEST_CMD="nginx -t"
-elif systemctl is-active --quiet apache2; then
-    WEBSERVER="apache"
-    CONFIG_DIR="/etc/apache2/sites-available"
-    ENABLE_CMD="a2ensite api.oftisoft.com.conf"
-    RELOAD_CMD="systemctl reload apache2"
-    TEST_CMD="apache2ctl configtest"
-else
-    echo "⚠️  No active web server detected (nginx/apache2)"
-    echo "Please install nginx or apache2 first"
-    exit 1
+# Detect web server - check what's using port 80
+echo "🔍 Detecting web server..."
+PORT_80_PROCESS=$(sudo lsof -i :80 2>/dev/null | grep LISTEN | awk '{print $1}' | head -1 || echo "")
+
+if [ -n "$PORT_80_PROCESS" ]; then
+    echo "   Port 80 is being used by: $PORT_80_PROCESS"
+fi
+
+# Check if nginx is installed and can be used
+if command -v nginx &> /dev/null; then
+    if systemctl is-active --quiet nginx 2>/dev/null || [ "$PORT_80_PROCESS" = "nginx" ]; then
+        WEBSERVER="nginx"
+        CONFIG_DIR="/etc/nginx/sites-available"
+        ENABLE_CMD="ln -sf $CONFIG_DIR/api.oftisoft.com /etc/nginx/sites-enabled/"
+        RELOAD_CMD="systemctl reload nginx"
+        TEST_CMD="nginx -t"
+    elif [ -f /etc/nginx/nginx.conf ]; then
+        # Nginx is installed but not running - we can still configure it
+        echo "⚠️  Nginx is installed but not running"
+        echo "   Configuring nginx anyway (you may need to start it later)"
+        WEBSERVER="nginx"
+        CONFIG_DIR="/etc/nginx/sites-available"
+        ENABLE_CMD="ln -sf $CONFIG_DIR/api.oftisoft.com /etc/nginx/sites-enabled/"
+        RELOAD_CMD="systemctl reload nginx 2>/dev/null || echo 'Nginx not running - start it manually'"
+        TEST_CMD="nginx -t"
+    fi
+fi
+
+# Check apache2 if nginx not detected
+if [ -z "$WEBSERVER" ]; then
+    if command -v apache2 &> /dev/null; then
+        if systemctl is-active --quiet apache2 2>/dev/null || [ "$PORT_80_PROCESS" = "apache2" ]; then
+            WEBSERVER="apache"
+            CONFIG_DIR="/etc/apache2/sites-available"
+            ENABLE_CMD="a2ensite api.oftisoft.com.conf"
+            RELOAD_CMD="systemctl reload apache2"
+            TEST_CMD="apache2ctl configtest"
+        elif [ -f /etc/apache2/apache2.conf ]; then
+            echo "⚠️  Apache2 is installed but not running"
+            echo "   Configuring apache2 anyway (you may need to start it later)"
+            WEBSERVER="apache"
+            CONFIG_DIR="/etc/apache2/sites-available"
+            ENABLE_CMD="a2ensite api.oftisoft.com.conf"
+            RELOAD_CMD="systemctl reload apache2 2>/dev/null || echo 'Apache2 not running - start it manually'"
+            TEST_CMD="apache2ctl configtest"
+        fi
+    fi
+fi
+
+# If still no web server detected, try to install nginx
+if [ -z "$WEBSERVER" ]; then
+    echo "⚠️  No web server detected"
+    echo "   Attempting to install nginx..."
+    apt-get update -qq
+    apt-get install -y nginx > /dev/null 2>&1
+    if [ $? -eq 0 ]; then
+        WEBSERVER="nginx"
+        CONFIG_DIR="/etc/nginx/sites-available"
+        ENABLE_CMD="ln -sf $CONFIG_DIR/api.oftisoft.com /etc/nginx/sites-enabled/"
+        RELOAD_CMD="systemctl reload nginx"
+        TEST_CMD="nginx -t"
+        echo "✅ Nginx installed successfully"
+    else
+        echo "❌ Failed to install nginx"
+        echo "   Please install nginx or apache2 manually:"
+        echo "   sudo apt install -y nginx"
+        exit 1
+    fi
 fi
 
 echo "✅ Detected web server: $WEBSERVER"
