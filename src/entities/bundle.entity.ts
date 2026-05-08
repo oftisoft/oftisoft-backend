@@ -1,36 +1,44 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToMany, JoinTable } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToMany,
+  JoinTable,
+} from 'typeorm';
 import { Product } from './product.entity';
 
 @Entity('bundles')
 export class Bundle {
-    @PrimaryGeneratedColumn('uuid')
-    id: string;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-    @Column()
-    name: string;
+  @Column()
+  name: string;
 
-    @Column('text')
-    description: string;
+  @Column('text')
+  description: string;
 
-    @Column('decimal')
-    price: number;
+  @Column('decimal')
+  price: number;
 
-    @Column('decimal')
-    originalPrice: number;
+  @Column('decimal')
+  originalPrice: number;
 
-    @Column({ nullable: true })
-    image: string;
+  @Column({ nullable: true })
+  image: string;
 
-    @ManyToMany(() => Product)
-    @JoinTable()
-    products: Product[];
+  @ManyToMany(() => Product)
+  @JoinTable()
+  products: Product[];
 
-    @Column({ default: true })
-    isActive: boolean;
+  @Column({ default: true })
+  isActive: boolean;
 
-    @CreateDateColumn()
-    createdAt: Date;
+  @CreateDateColumn()
+  createdAt: Date;
 
-    @UpdateDateColumn()
-    updatedAt: Date;
+  @UpdateDateColumn()
+  updatedAt: Date;
 }

@@ -31,6 +31,7 @@ import { Favorite } from './entities/favorite.entity';
 import { MarketingModule } from './marketing/marketing.module';
 import { Coupon } from './entities/coupon.entity';
 import { Bundle } from './entities/bundle.entity';
+import { SubscriptionPlan } from './entities/subscription-plan.entity';
 import { MessagesModule } from './messages/messages.module';
 import { Conversation } from './entities/conversation.entity';
 import { Message } from './entities/message.entity';
@@ -58,9 +59,28 @@ import { SiteVisit } from './entities/site-visit.entity';
 import { SiteEvent } from './entities/site-event.entity';
 import { AffiliateModule } from './affiliate/affiliate.module';
 import { Affiliate } from './entities/affiliate.entity';
+import { Review } from './entities/review.entity';
 import { AffiliateCommission } from './entities/affiliate-commission.entity';
 import { AffiliateWithdrawal } from './entities/affiliate-withdrawal.entity';
-
+import { FailedLoginAttempt } from './entities/failed-login-attempt.entity';
+import { EmailVerificationToken } from './entities/email-verification-token.entity';
+import { TaxRate } from './entities/tax-rate.entity';
+import { AuditLog } from './entities/audit-log.entity';
+import { WebsocketModule } from './websocket/websocket.module';
+import { AuditModule } from './audit/audit.module';
+import { BlogSeederModule } from './blog-seeder/blog-seeder.module';
+import { EventsModule } from './events/events.module';
+import { Event } from './entities/event.entity';
+import { EventRegistration } from './entities/event-registration.entity';
+import { CampaignsModule } from './campaigns/campaigns.module';
+import { Campaign } from './entities/campaign.entity';
+import { PostsModule } from './posts/posts.module';
+import { Post } from './entities/post.entity';
+import { Tag } from './entities/tag.entity';
+import { BlockedUser } from './entities/blocked-user.entity';
+import { Integration } from './entities/integration.entity';
+import { IntegrationsModule } from './integrations/integrations.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -77,12 +97,65 @@ import { AffiliateWithdrawal } from './entities/affiliate-withdrawal.entity';
       useFactory: (configService: ConfigService) => ({
         type: 'postgres',
         host: configService.get('DATABASE_HOST'),
-        port: parseInt(configService.get<string>('DATABASE_PORT') || '5432', 10),
+        port: parseInt(
+          configService.get<string>('DATABASE_PORT') || '5432',
+          10,
+        ),
         username: configService.get('DATABASE_USER'),
         password: configService.get('DATABASE_PASSWORD'),
         database: configService.get('DATABASE_NAME'),
-        ssl: configService.get('DATABASE_SSLMODE') === 'require' ? { rejectUnauthorized: false } : false,
-        entities: [User, RefreshToken, Ticket, TicketMessage, PaymentMethod, Transaction, SystemConfig, ApiKey, EmailTemplate, Product, UserAsset, DownloadRecord, UpdateNotification, ProductVersion, Favorite, Coupon, Bundle, Message, Conversation, Notification, Order, OrderItem, Category, Project, Quote, PageContent, Lead, Ad, SiteVisit, SiteEvent, Affiliate, AffiliateCommission, AffiliateWithdrawal],
+        ssl:
+          configService.get('DATABASE_SSLMODE') === 'require'
+            ? { rejectUnauthorized: false }
+            : false,
+        entities: [
+          User,
+          RefreshToken,
+          Ticket,
+          TicketMessage,
+          PaymentMethod,
+          Transaction,
+          SystemConfig,
+          ApiKey,
+          EmailTemplate,
+          Product,
+          UserAsset,
+          DownloadRecord,
+          UpdateNotification,
+          ProductVersion,
+          Favorite,
+          Coupon,
+          Bundle,
+          SubscriptionPlan,
+          Message,
+          Conversation,
+          Notification,
+          Order,
+          OrderItem,
+          Category,
+          Project,
+          Quote,
+          PageContent,
+          Lead,
+          Ad,
+          Review,
+          SiteVisit,
+          SiteEvent,
+          Affiliate,
+          AffiliateCommission,
+          AffiliateWithdrawal,
+          FailedLoginAttempt,
+          EmailVerificationToken,
+          TaxRate,
+          AuditLog,
+          Event,
+          EventRegistration,
+          Campaign,
+          Post,
+          Tag,
+          BlockedUser,
+          Integration,
+        ],
         synchronize: configService.get('NODE_ENV') === 'development',
         logging: false,
       }),
@@ -115,8 +188,15 @@ import { AffiliateWithdrawal } from './entities/affiliate-withdrawal.entity';
     ReviewsModule,
     AnalyticsModule,
     AffiliateModule,
+    WebsocketModule,
+    BlogSeederModule,
+    EventsModule,
+    CampaignsModule,
+    PostsModule,
+    IntegrationsModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}

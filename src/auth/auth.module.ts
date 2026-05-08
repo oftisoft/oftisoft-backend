@@ -7,32 +7,53 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { User } from '../entities/user.entity';
 import { RefreshToken } from '../entities/refresh-token.entity';
+import { EmailVerificationToken } from '../entities/email-verification-token.entity';
+import { FailedLoginAttempt } from '../entities/failed-login-attempt.entity';
 import { LocalStrategy } from './strategies/local.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { GithubStrategy } from './strategies/github.strategy';
 import { EmailService } from './email.service';
-import { CloudinaryModule } from '../cloudinary/cloudinary.module';
+import { S3Module } from '../s3/s3.module';
+import { EmailVerificationService } from './email-verification.service';
+import { AccountLockoutService } from './account-lockout.service';
+import { EmailLoginController } from './email-login.controller';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([User, RefreshToken]),
-        PassportModule,
-        JwtModule.registerAsync({
-            imports: [ConfigModule],
-            useFactory: (configService: ConfigService) => ({
-                secret: configService.get<string>('JWT_ACCESS_SECRET') || 'default-secret',
-                signOptions: {
-                    expiresIn: '15m',
-                },
-            }),
-            inject: [ConfigService],
-        }),
-        CloudinaryModule,
-    ],
-    controllers: [AuthController],
-    providers: [AuthService, EmailService, LocalStrategy, JwtStrategy, JwtRefreshStrategy, GoogleStrategy, GithubStrategy],
-    exports: [AuthService],
+  imports: [
+    TypeOrmModule.forFeature([
+      User,
+      RefreshToken,
+      EmailVerificationToken,
+      FailedLoginAttempt,
+    ]),
+    PassportModule,
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        secret:
+          configService.get<string>('JWT_ACCESS_SECRET') || 'default-secret',
+        signOptions: {
+          expiresIn: '15m',
+        },
+      }),
+      inject: [ConfigService],
+    }),
+    S3Module,
+  ],
+  controllers: [AuthController, EmailLoginController],
+  providers: [
+    AuthService,
+    EmailService,
+    EmailVerificationService,
+    AccountLockoutService,
+    LocalStrategy,
+    JwtStrategy,
+    JwtRefreshStrategy,
+    GoogleStrategy,
+    GithubStrategy,
+  ],
+  exports: [AuthService],
 })
-export class AuthModule { }
+export class AuthModule {}

@@ -1,73 +1,100 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToMany,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
+import { User } from './user.entity';
 
 @Entity('products')
 export class Product {
-    @PrimaryGeneratedColumn('uuid')
-    id: string;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-    @Column()
-    name: string;
+  @Column()
+  name: string;
 
-    @Column({ unique: true })
-    slug: string;
+  @Column({ unique: true })
+  slug: string;
 
-    @Column('text')
-    description: string;
+  @Column('text')
+  description: string;
 
-    @Column('decimal')
-    price: number;
+  @Column('decimal')
+  price: number;
 
-    @Column('decimal', { precision: 3, scale: 1, default: 0 })
-    rating: number;
+  @Column('decimal', { precision: 3, scale: 1, default: 0 })
+  rating: number;
 
-    @Column({ default: 0 })
-    reviews: number;
+  @Column({ default: 0 })
+  reviews: number;
 
-    @Column()
-    category: string;
+  @Column()
+  category: string;
 
-    @Column()
-    subcategory: string;
+  @Column()
+  subcategory: string;
 
-    @Column()
-    image: string;
+  @Column()
+  image: string;
 
-    @Column('simple-array')
-    tags: string[];
+  @Column('simple-array')
+  tags: string[];
 
-    @Column('simple-array')
-    features: string[];
+  @Column('simple-array')
+  features: string[];
 
-    @Column('simple-array', { nullable: true })
-    screenshots: string[];
+  @Column('simple-array', { nullable: true })
+  screenshots: string[];
 
-    @Column({ nullable: true })
-    demoUrl: string;
+  @Column({ nullable: true })
+  demoUrl: string;
 
-    @Column({ nullable: true })
-    docUrl: string;
+  @Column({ nullable: true })
+  docUrl: string;
 
-    @Column('simple-array', { nullable: true })
-    compatibility: string[];
+  @Column('simple-array', { nullable: true })
+  compatibility: string[];
 
-    @Column()
-    version: string;
+  @Column()
+  version: string;
 
-    @Column()
-    updatePolicy: string;
+  @Column()
+  updatePolicy: string;
 
-    @Column('decimal')
-    licenseRegular: number;
+  @Column('decimal')
+  licenseRegular: number;
 
-    @Column('decimal')
-    licenseExtended: number;
+  @Column('decimal')
+  licenseExtended: number;
 
-    @Column({ type: 'timestamp', nullable: true })
-    lastUpdated: Date;
+  @Column({ type: 'timestamp', nullable: true })
+  lastUpdated: Date;
 
-    @CreateDateColumn()
-    createdAt: Date;
+  // Product approval fields
+  @Column({ default: 'pending' })
+  status: string; // 'pending', 'approved', 'rejected'
 
-    @UpdateDateColumn()
-    updatedAt: Date;
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn()
+  vendor: User;
+
+  @Column({ nullable: true })
+  vendorId: string;
+
+  @Column({ type: 'text', nullable: true })
+  rejectionReason: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  approvedAt: Date;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 }

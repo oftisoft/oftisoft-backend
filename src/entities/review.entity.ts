@@ -1,43 +1,53 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+} from 'typeorm';
 import { User } from './user.entity';
 import { Product } from './product.entity';
 
 export enum ReviewStatus {
-    PENDING = 'pending',
-    APPROVED = 'approved',
-    REJECTED = 'rejected'
+  PENDING = 'pending',
+  APPROVED = 'approved',
+  REJECTED = 'rejected',
 }
 
 @Entity('reviews')
 export class Review {
-    @PrimaryGeneratedColumn('uuid')
-    id: string;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-    @ManyToOne(() => User, { eager: true, onDelete: 'CASCADE' })
-    user: User;
+  @ManyToOne(() => User, (user) => user.reviews, {
+    eager: true,
+    onDelete: 'CASCADE',
+  })
+  user: User;
 
-    @ManyToOne(() => Product, { eager: true, onDelete: 'CASCADE' })
-    product: Product;
+  @ManyToOne(() => Product, { eager: true, onDelete: 'CASCADE' })
+  product: Product;
 
-    @Column('int')
-    rating: number; // 1 to 5
+  @Column('int')
+  rating: number; // 1 to 5
 
-    @Column('text')
-    comment: string;
+  @Column('text')
+  comment: string;
 
-    @Column({
-        type: 'enum',
-        enum: ReviewStatus,
-        default: ReviewStatus.PENDING
-    })
-    status: ReviewStatus;
+  @Column({
+    type: 'enum',
+    enum: ReviewStatus,
+    default: ReviewStatus.PENDING,
+  })
+  status: ReviewStatus;
 
-    @Column({ default: 0 })
-    helpfulCount: number;
+  @Column({ default: 0 })
+  helpfulCount: number;
 
-    @CreateDateColumn()
-    createdAt: Date;
+  @CreateDateColumn()
+  createdAt: Date;
 
-    @UpdateDateColumn()
-    updatedAt: Date;
+  @UpdateDateColumn()
+  updatedAt: Date;
 }

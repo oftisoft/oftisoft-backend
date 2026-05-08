@@ -5,14 +5,23 @@ import { AnalyticsService } from './analytics.service';
 import { SiteVisit } from '../entities/site-visit.entity';
 import { SiteEvent } from '../entities/site-event.entity';
 import { Order } from '../entities/order.entity';
+import { OrderItem } from '../entities/order-item.entity';
 import { User } from '../entities/user.entity';
+import { Project } from '../entities/project.entity';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([SiteVisit, SiteEvent, Order, User]),
-    ],
-    controllers: [AnalyticsController],
-    providers: [AnalyticsService],
-    exports: [AnalyticsService],
+  imports: [
+    TypeOrmModule.forFeature([
+      SiteVisit,
+      SiteEvent,
+      Order,
+      OrderItem,
+      User,
+      Project,
+    ]),
+  ],
+  controllers: [AnalyticsController],
+  providers: [AnalyticsService],
+  exports: [AnalyticsService],
 })
-export class AnalyticsModule { }
+export class AnalyticsModule {}

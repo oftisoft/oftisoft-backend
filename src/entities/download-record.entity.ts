@@ -1,24 +1,32 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  ManyToOne,
+} from 'typeorm';
 import { User } from './user.entity';
 import { Product } from './product.entity';
 
 @Entity('download_records')
 export class DownloadRecord {
-    @PrimaryGeneratedColumn('uuid')
-    id: string;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-    @ManyToOne(() => User, { onDelete: 'CASCADE' })
-    user: User;
+  @ManyToOne(() => User, (user) => user.downloadRecords, {
+    onDelete: 'CASCADE',
+  })
+  user: User;
 
-    @ManyToOne(() => Product, { onDelete: 'CASCADE' })
-    product: Product;
+  @ManyToOne(() => Product, { onDelete: 'CASCADE' })
+  product: Product;
 
-    @Column()
-    version: string;
+  @Column()
+  version: string;
 
-    @Column()
-    ip: string;
+  @Column()
+  ip: string;
 
-    @CreateDateColumn()
-    downloadDate: Date;
+  @CreateDateColumn()
+  downloadDate: Date;
 }

@@ -1,29 +1,42 @@
-
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToMany, JoinTable, OneToMany } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  ManyToMany,
+  JoinTable,
+  OneToMany,
+} from 'typeorm';
 import { User } from './user.entity';
 import { Message } from './message.entity';
 
 @Entity('conversations')
 export class Conversation {
-    @PrimaryGeneratedColumn('uuid')
-    id: string;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-    @Column({ nullable: true })
-    name: string;
+  @Column({ nullable: true })
+  name: string;
 
-    @Column({ default: 'direct' }) // 'direct', 'group'
-    type: string;
+  @Column({ default: 'direct' })
+  type: string; // 'direct', 'group'
 
-    @CreateDateColumn()
-    createdAt: Date;
+  @CreateDateColumn()
+  createdAt: Date;
 
-    @UpdateDateColumn()
-    updatedAt: Date;
+  @Column({ default: false })
+  isPinned: boolean;
 
-    @ManyToMany(() => User)
-    @JoinTable()
-    participants: User[];
+  @Column({ default: false })
+  isMuted: boolean;
 
-    @OneToMany(() => Message, message => message.conversation)
-    messages: Message[];
+  @Column({ type: 'simple-json', nullable: true })
+  blockedBy: string[];
+
+  @ManyToMany(() => User)
+  @JoinTable()
+  participants: User[];
+
+  @OneToMany(() => Message, (message) => message.conversation)
+  messages: Message[];
 }

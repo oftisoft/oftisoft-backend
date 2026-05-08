@@ -1,0 +1,27 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: oftisoft-backend:latest
+    container_name: oftisoft-backend
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    # Port mapping for VPS
+    ports:
+      - "5500:5500"
+    # Cloudflare SSL configuration
+    # For Full (strict) SSL mode, mount origin certificates
+    volumes:
+      - ./ssl:/app/ssl:ro
+    environment:
+      - NODE_ENV=production
+      - API_URL=https://api.oftisoft.com
+      - PORT=5500
+    networks:
+      - abs_app-network
+
+networks:
+  abs_app-network:
+    external: true

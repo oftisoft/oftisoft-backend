@@ -10,18 +10,18 @@ import { User } from '../entities/user.entity';
 import { ProductVersion } from '../entities/product-version.entity';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([
-            Product,
-            UserAsset,
-            DownloadRecord,
-            UpdateNotification,
-            User,
-            ProductVersion,
-        ]),
-    ],
-    controllers: [DownloadsController],
-    providers: [DownloadsService],
-    exports: [DownloadsService],
+  imports: [
+    TypeOrmModule.forFeature([
+      Product,
+      UserAsset,
+      DownloadRecord,
+      UpdateNotification,
+      User,
+      ProductVersion,
+    ]),
+  ],
+  controllers: [DownloadsController],
+  providers: [DownloadsService],
+  exports: [DownloadsService],
 })
-export class DownloadsModule { }
+export class DownloadsModule {}

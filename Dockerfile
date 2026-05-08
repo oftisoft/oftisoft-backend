@@ -1,28 +1,26 @@
-# Node 20 LTS
-FROM node:20-alpine AS base
+# Use official Node.js image
+FROM node:20-alpine
 
-FROM base AS deps
+# Set working directory
 WORKDIR /app
-COPY package.json package-lock.json* ./
-RUN npm ci
 
-FROM base AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+# Copy package.json and package-lock.json
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install --force
+
+# Copy source code
 COPY . .
-RUN npm run build || (echo "Build failed!" && exit 1)
-RUN ls -la dist/ || (echo "dist directory not found!" && exit 1)
-RUN test -f dist/main.js || (echo "ERROR: dist/main.js not found after build" && ls -la dist/ && exit 1)
 
-FROM base AS runner
-WORKDIR /app
-ENV NODE_ENV=production
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nestjs
-COPY --from=builder /app/package*.json ./
-RUN npm ci --omit=dev
-COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
-RUN ls -la dist/ && echo "Files in dist directory:" && find dist -name "main*" -type f
-USER nestjs
-EXPOSE 5050
-CMD ["node", "dist/main.js"]
+# Build NestJS project
+RUN npm run build
+
+    # Verify build output exists (fails image build if dist is missing)
+RUN test -f dist/src/main.js || (echo "Build failed: dist/src/main.js not found" && exit 1)
+
+    # Expose backend port
+    EXPOSE 5500
+
+    # Start NestJS app
+    CMD ["node", "dist/src/main.js"]

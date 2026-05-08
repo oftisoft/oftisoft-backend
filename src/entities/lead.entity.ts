@@ -1,52 +1,58 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 
 export enum LeadType {
-    CTA = 'cta',
-    NEWSLETTER = 'newsletter',
-    CONTACT = 'contact'
+  CTA = 'cta',
+  NEWSLETTER = 'newsletter',
+  CONTACT = 'contact',
 }
 
 export enum LeadStatus {
-    NEW = 'new',
-    IN_PROGRESS = 'in_progress',
-    CONVERTED = 'converted',
-    ARCHIVED = 'archived'
+  NEW = 'new',
+  IN_PROGRESS = 'in_progress',
+  CONVERTED = 'converted',
+  ARCHIVED = 'archived',
 }
 
 @Entity('leads')
 export class Lead {
-    @PrimaryGeneratedColumn('uuid')
-    id: string;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-    @Column({ nullable: true })
-    name: string;
+  @Column({ nullable: true })
+  name: string;
 
-    @Column()
-    email: string;
+  @Column()
+  email: string;
 
-    @Column({ type: 'text', nullable: true })
-    message: string;
+  @Column({ type: 'text', nullable: true })
+  message: string;
 
-    @Column({
-        type: 'enum',
-        enum: LeadType,
-        default: LeadType.CTA
-    })
-    type: LeadType;
+  @Column({
+    type: 'enum',
+    enum: LeadType,
+    default: LeadType.CTA,
+  })
+  type: LeadType;
 
-    @Column({
-        type: 'enum',
-        enum: LeadStatus,
-        default: LeadStatus.NEW
-    })
-    status: LeadStatus;
+  @Column({
+    type: 'enum',
+    enum: LeadStatus,
+    default: LeadStatus.NEW,
+  })
+  status: LeadStatus;
 
-    @Column({ type: 'json', nullable: true })
-    metadata: any;
+  @Column({ type: 'json', nullable: true })
+  metadata: any;
 
-    @CreateDateColumn()
-    createdAt: Date;
+  @CreateDateColumn()
+  createdAt: Date;
 
-    @UpdateDateColumn()
-    updatedAt: Date;
+  @UpdateDateColumn()
+  updatedAt: Date;
 }

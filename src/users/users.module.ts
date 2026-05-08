@@ -8,9 +8,9 @@ import { Ticket } from '../entities/ticket.entity';
 import { SiteVisit } from '../entities/site-visit.entity';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([User, Transaction, Ticket, SiteVisit])],
-    controllers: [UsersController],
-    providers: [UsersService],
-    exports: [UsersService],
+  imports: [TypeOrmModule.forFeature([User, Transaction, Ticket, SiteVisit])],
+  controllers: [UsersController],
+  providers: [UsersService],
+  exports: [UsersService],
 })
-export class UsersModule { }
+export class UsersModule {}

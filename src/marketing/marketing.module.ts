@@ -8,8 +8,10 @@ import { Product } from '../entities/product.entity';
 import { SubscriptionPlan } from '../entities/subscription-plan.entity';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([Coupon, Bundle, Product, SubscriptionPlan])],
-    controllers: [MarketingController],
-    providers: [MarketingService],
+  imports: [
+    TypeOrmModule.forFeature([Coupon, Bundle, Product, SubscriptionPlan]),
+  ],
+  controllers: [MarketingController],
+  providers: [MarketingService],
 })
-export class MarketingModule { }
+export class MarketingModule {}

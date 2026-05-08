@@ -1,27 +1,33 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  ManyToOne,
+} from 'typeorm';
 import { User } from './user.entity';
 import { Product } from './product.entity';
 
 @Entity('user_assets')
 export class UserAsset {
-    @PrimaryGeneratedColumn('uuid')
-    id: string;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-    @ManyToOne(() => User, { onDelete: 'CASCADE' })
-    user: User;
+  @ManyToOne(() => User, (user) => user.userAssets, { onDelete: 'CASCADE' })
+  user: User;
 
-    @ManyToOne(() => Product, { onDelete: 'CASCADE' })
-    product: Product;
+  @ManyToOne(() => Product, { onDelete: 'CASCADE' })
+  product: Product;
 
-    @Column()
-    licenseKey: string;
+  @Column()
+  licenseKey: string;
 
-    @Column({ default: 'Regular' })
-    licenseType: string;
+  @Column({ default: 'Regular' })
+  licenseType: string;
 
-    @Column({ nullable: true })
-    bonusAsset: string;
+  @Column({ nullable: true })
+  bonusAsset: string;
 
-    @CreateDateColumn()
-    purchaseDate: Date;
+  @CreateDateColumn()
+  purchaseDate: Date;
 }

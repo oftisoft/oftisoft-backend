@@ -1,31 +1,31 @@
 import {
-    Entity,
-    PrimaryGeneratedColumn,
-    Column,
-    UpdateDateColumn,
-    CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  UpdateDateColumn,
+  CreateDateColumn,
 } from 'typeorm';
 
 @Entity('email_templates')
 export class EmailTemplate {
-    @PrimaryGeneratedColumn('uuid')
-    id: string;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-    @Column()
-    name: string;
+  @Column()
+  name: string;
 
-    @Column()
-    subject: string;
+  @Column()
+  subject: string;
 
-    @Column({ type: 'text' })
-    body: string;
+  @Column({ type: 'text' })
+  body: string;
 
-    @Column({ default: 'active' })
-    status: 'active' | 'draft';
+  @Column({ default: 'active' })
+  status: 'active' | 'draft';
 
-    @CreateDateColumn()
-    createdAt: Date;
+  @CreateDateColumn()
+  createdAt: Date;
 
-    @UpdateDateColumn()
-    updatedAt: Date;
+  @UpdateDateColumn()
+  updatedAt: Date;
 }

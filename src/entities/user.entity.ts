@@ -9,6 +9,20 @@ import {
 import { Exclude } from 'class-transformer';
 import { RefreshToken } from './refresh-token.entity';
 import { Favorite } from './favorite.entity';
+import { Order } from './order.entity';
+import { Ticket } from './ticket.entity';
+import { Project } from './project.entity';
+import { Review } from './review.entity';
+import { Notification } from './notification.entity';
+import { PaymentMethod } from './payment-method.entity';
+import { Transaction } from './transaction.entity';
+import { DownloadRecord } from './download-record.entity';
+import { UserAsset } from './user-asset.entity';
+import { Quote } from './quote.entity';
+import { ApiKey } from './api-key.entity';
+import { BlockedUser } from './blocked-user.entity';
+import { EmailVerificationToken } from './email-verification-token.entity';
+import { Product } from './product.entity';
 
 @Entity('users')
 export class User {
@@ -120,7 +134,7 @@ export class User {
   kernelUpdateNotifications: boolean;
 
   @Column({ default: 'Viewer' })
-  role: string; // 'Admin' | 'Editor' | 'Support' | 'Viewer'
+  role: string; // 'SuperAdmin' | 'Admin' | 'Editor' | 'Support' | 'Viewer'
 
   @Column({ default: 'Starter' })
   subscriptionPlan: string; // 'Starter' | 'Pro' | 'Business'
@@ -131,11 +145,56 @@ export class User {
   @Column({ default: false })
   isAI: boolean;
 
+  @Column({ default: 0 })
+  tokenVersion: number; // Incremented to invalidate all tokens
+
   @OneToMany(() => RefreshToken, (refreshToken) => refreshToken.user)
   refreshTokens: RefreshToken[];
 
   @OneToMany(() => Favorite, (favorite) => favorite.user)
   favorites: Favorite[];
+
+  @OneToMany(() => Order, (order) => order.user)
+  orders: Order[];
+
+  @OneToMany(() => Ticket, (ticket) => ticket.customer)
+  tickets: Ticket[];
+
+  @OneToMany(() => Project, (project) => project.user)
+  projects: Project[];
+
+  @OneToMany(() => Review, (review) => review.user)
+  reviews: Review[];
+
+  @OneToMany(() => Notification, (notification) => notification.user)
+  notifications: Notification[];
+
+  @OneToMany(() => PaymentMethod, (paymentMethod) => paymentMethod.user)
+  paymentMethods: PaymentMethod[];
+
+  @OneToMany(() => Transaction, (transaction) => transaction.user)
+  transactions: Transaction[];
+
+  @OneToMany(() => DownloadRecord, (downloadRecord) => downloadRecord.user)
+  downloadRecords: DownloadRecord[];
+
+  @OneToMany(() => UserAsset, (userAsset) => userAsset.user)
+  userAssets: UserAsset[];
+
+  @OneToMany(() => Quote, (quote) => quote.user)
+  quotes: Quote[];
+
+  @OneToMany(() => ApiKey, (apiKey) => apiKey.createdBy)
+  apiKeys: ApiKey[];
+
+  @OneToMany(() => BlockedUser, (blockedUser) => blockedUser.blockedBy)
+  blockedUsers: BlockedUser[];
+
+  @OneToMany(() => EmailVerificationToken, (token) => token.user)
+  emailVerificationTokens: EmailVerificationToken[];
+
+  @OneToMany(() => Product, (product) => product.vendor)
+  products: Product[];
 
   @CreateDateColumn()
   createdAt: Date;

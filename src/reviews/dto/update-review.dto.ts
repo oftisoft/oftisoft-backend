@@ -3,13 +3,13 @@ import { CreateReviewDto } from './create-review.dto';
 import { IsEnum, IsOptional } from 'class-validator';
 
 export enum ReviewStatus {
-    PENDING = 'pending',
-    APPROVED = 'approved',
-    REJECTED = 'rejected'
+  PENDING = 'pending',
+  APPROVED = 'approved',
+  REJECTED = 'rejected',
 }
 
 export class UpdateReviewDto extends PartialType(CreateReviewDto) {
-    @IsOptional()
-    @IsEnum(ReviewStatus)
-    status?: ReviewStatus;
+  @IsOptional()
+  @IsEnum(ReviewStatus)
+  status?: ReviewStatus;
 }

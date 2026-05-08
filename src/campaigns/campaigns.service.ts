@@ -1,0 +1,146 @@
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Campaign, CampaignStatus } from '../entities/campaign.entity';
+
+@Injectable()
+export class CampaignsService {
+  constructor(
+    @InjectRepository(Campaign)
+    private campaignRepository: Repository<Campaign>,
+  ) {}
+
+  async create(campaignData: Partial<Campaign>): Promise<Campaign> {
+    const campaign = this.campaignRepository.create(campaignData);
+    return this.campaignRepository.save(campaign);
+  }
+
+  async findAll(options?: {
+    status?: CampaignStatus;
+    type?: string;
+  }): Promise<Campaign[]> {
+    const query = this.campaignRepository.createQueryBuilder('campaign');
+
+    if (options?.status) {
+      query.andWhere('campaign.status = :status', { status: options.status });
+    }
+
+    if (options?.type) {
+      query.andWhere('campaign.type = :type', { type: options.type });
+    }
+
+    query.orderBy('campaign.createdAt', 'DESC');
+    return query.getMany();
+  }
+
+  async findOne(id: string): Promise<Campaign> {
+    const campaign = await this.campaignRepository.findOne({
+      where: { id },
+      relations: ['creator'],
+    });
+    if (!campaign) {
+      throw new NotFoundException('Campaign not found');
+    }
+    return campaign;
+  }
+
+  async findBySlug(slug: string): Promise<Campaign> {
+    const campaign = await this.campaignRepository.findOne({
+      where: { slug },
+    });
+    if (!campaign) {
+      throw new NotFoundException('Campaign not found');
+    }
+    return campaign;
+  }
+
+  async update(id: string, campaignData: Partial<Campaign>): Promise<Campaign> {
+    const campaign = await this.findOne(id);
+    Object.assign(campaign, campaignData);
+    return this.campaignRepository.save(campaign);
+  }
+
+  async remove(id: string): Promise<void> {
+    const campaign = await this.findOne(id);
+    await this.campaignRepository.remove(campaign);
+  }
+
+  async updateMetrics(
+    id: string,
+    metrics: Partial<Campaign['metrics']>,
+  ): Promise<Campaign> {
+    const campaign = await this.findOne(id);
+    campaign.metrics = {
+      ...campaign.metrics,
+      ...metrics,
+    } as any;
+    return this.campaignRepository.save(campaign);
+  }
+
+  async updateSpent(id: string, amount: number): Promise<Campaign> {
+    const campaign = await this.findOne(id);
+    campaign.spent = Number(campaign.spent) + amount;
+    return this.campaignRepository.save(campaign);
+  }
+
+  async start(id: string): Promise<Campaign> {
+    const campaign = await this.findOne(id);
+    campaign.status = CampaignStatus.ACTIVE;
+    return this.campaignRepository.save(campaign);
+  }
+
+  async pause(id: string): Promise<Campaign> {
+    const campaign = await this.findOne(id);
+    campaign.status = CampaignStatus.PAUSED;
+    return this.campaignRepository.save(campaign);
+  }
+
+  async complete(id: string): Promise<Campaign> {
+    const campaign = await this.findOne(id);
+    campaign.status = CampaignStatus.COMPLETED;
+    campaign.endDate = new Date();
+    return this.campaignRepository.save(campaign);
+  }
+
+  async getActiveCampaigns(): Promise<Campaign[]> {
+    return this.campaignRepository.find({
+      where: { status: CampaignStatus.ACTIVE },
+    });
+  }
+
+  async getStats(): Promise<{
+    total: number;
+    active: number;
+    completed: number;
+    totalBudget: number;
+    totalSpent: number;
+    avgROAS: number;
+  }> {
+    const campaigns = await this.campaignRepository.find();
+
+    return {
+      total: campaigns.length,
+      active: campaigns.filter((c) => c.status === CampaignStatus.ACTIVE)
+        .length,
+      completed: campaigns.filter((c) => c.status === CampaignStatus.COMPLETED)
+        .length,
+      totalBudget: campaigns.reduce((sum, c) => sum + Number(c.budget), 0),
+      totalSpent: campaigns.reduce((sum, c) => sum + Number(c.spent), 0),
+      avgROAS: this.calculateAvgROAS(campaigns),
+    };
+  }
+
+  private calculateAvgROAS(campaigns: Campaign[]): number {
+    const withRevenue = campaigns.filter(
+      (c) => c.metrics?.revenue && Number(c.spent) > 0,
+    );
+    if (withRevenue.length === 0) return 0;
+
+    const totalROAS = withRevenue.reduce((sum, c) => {
+      const roas = Number(c.metrics.revenue) / Number(c.spent);
+      return sum + roas;
+    }, 0);
+
+    return totalROAS / withRevenue.length;
+  }
+}

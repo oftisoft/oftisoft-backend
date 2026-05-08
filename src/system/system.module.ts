@@ -13,24 +13,28 @@ import { PageContent } from '../entities/page-content.entity';
 import { SeederService } from './seeder.service';
 import { Conversation } from '../entities/conversation.entity';
 import { Message } from '../entities/message.entity';
+import { AuditModule } from '../audit/audit.module';
 
 import { SystemPublicController } from './system-public.controller';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([
-        SystemConfig,
-        User,
-        ApiKey,
-        EmailTemplate,
-        Product,
-        Project,
-        Category,
-        PageContent,
-        Conversation,
-        Message
-    ])],
-    controllers: [SystemController, SystemPublicController],
-    providers: [SystemService, SeederService],
-    exports: [SystemService, SeederService],
+  imports: [
+    TypeOrmModule.forFeature([
+      SystemConfig,
+      User,
+      ApiKey,
+      EmailTemplate,
+      Product,
+      Project,
+      Category,
+      PageContent,
+      Conversation,
+      Message,
+    ]),
+    AuditModule,
+  ],
+  controllers: [SystemController, SystemPublicController],
+  providers: [SystemService, SeederService],
+  exports: [SystemService, SeederService],
 })
-export class SystemModule { }
+export class SystemModule {}

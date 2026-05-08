@@ -1,95 +1,101 @@
-import { IsString, IsOptional, IsEmail, MinLength, IsBoolean } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsEmail,
+  MinLength,
+  IsBoolean,
+} from 'class-validator';
 
 export class UpdateProfileDto {
-    @IsString()
-    @IsOptional()
-    name?: string;
+  @IsString()
+  @IsOptional()
+  name?: string;
 
-    @IsString()
-    @IsOptional()
-    phone?: string;
+  @IsString()
+  @IsOptional()
+  phone?: string;
 
-    @IsString()
-    @IsOptional()
-    jobTitle?: string;
+  @IsString()
+  @IsOptional()
+  jobTitle?: string;
 
-    @IsString()
-    @IsOptional()
-    bio?: string;
+  @IsString()
+  @IsOptional()
+  bio?: string;
 
-    @IsString()
-    @IsOptional()
-    address?: string;
+  @IsString()
+  @IsOptional()
+  address?: string;
 
-    @IsString()
-    @IsOptional()
-    city?: string;
+  @IsString()
+  @IsOptional()
+  city?: string;
 
-    @IsString()
-    @IsOptional()
-    state?: string;
+  @IsString()
+  @IsOptional()
+  state?: string;
 
-    @IsString()
-    @IsOptional()
-    zipCode?: string;
+  @IsString()
+  @IsOptional()
+  zipCode?: string;
 
-    @IsString()
-    @IsOptional()
-    unit?: string;
+  @IsString()
+  @IsOptional()
+  unit?: string;
 
-    @IsBoolean()
-    @IsOptional()
-    emailNotifications?: boolean;
+  @IsBoolean()
+  @IsOptional()
+  emailNotifications?: boolean;
 
-    @IsBoolean()
-    @IsOptional()
-    pushNotifications?: boolean;
+  @IsBoolean()
+  @IsOptional()
+  pushNotifications?: boolean;
 
-    @IsBoolean()
-    @IsOptional()
-    smsNotifications?: boolean;
+  @IsBoolean()
+  @IsOptional()
+  smsNotifications?: boolean;
 
-    @IsBoolean()
-    @IsOptional()
-    marketingNotifications?: boolean;
+  @IsBoolean()
+  @IsOptional()
+  marketingNotifications?: boolean;
 
-    @IsString()
-    @IsOptional()
-    avatarUrl?: string;
+  @IsString()
+  @IsOptional()
+  avatarUrl?: string;
 
-    @IsBoolean()
-    @IsOptional()
-    artifactDeploymentNotifications?: boolean;
+  @IsBoolean()
+  @IsOptional()
+  artifactDeploymentNotifications?: boolean;
 
-    @IsBoolean()
-    @IsOptional()
-    mentionNotifications?: boolean;
+  @IsBoolean()
+  @IsOptional()
+  mentionNotifications?: boolean;
 
-    @IsBoolean()
-    @IsOptional()
-    milestoneNotifications?: boolean;
+  @IsBoolean()
+  @IsOptional()
+  milestoneNotifications?: boolean;
 
-    @IsBoolean()
-    @IsOptional()
-    allocationNotifications?: boolean;
+  @IsBoolean()
+  @IsOptional()
+  allocationNotifications?: boolean;
 
-    @IsBoolean()
-    @IsOptional()
-    ledgerNotifications?: boolean;
+  @IsBoolean()
+  @IsOptional()
+  ledgerNotifications?: boolean;
 
-    @IsBoolean()
-    @IsOptional()
-    transactionNotifications?: boolean;
+  @IsBoolean()
+  @IsOptional()
+  transactionNotifications?: boolean;
 
-    @IsBoolean()
-    @IsOptional()
-    loginAlertNotifications?: boolean;
+  @IsBoolean()
+  @IsOptional()
+  loginAlertNotifications?: boolean;
 
-    @IsBoolean()
-    @IsOptional()
-    securityAlertNotifications?: boolean;
+  @IsBoolean()
+  @IsOptional()
+  securityAlertNotifications?: boolean;
 
-    @IsBoolean()
-    @IsOptional()
-    kernelUpdateNotifications?: boolean;
+  @IsBoolean()
+  @IsOptional()
+  kernelUpdateNotifications?: boolean;
 }

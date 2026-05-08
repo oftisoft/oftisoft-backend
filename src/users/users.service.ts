@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like } from 'typeorm';
 import { User } from '../entities/user.entity';
@@ -9,113 +14,191 @@ import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
-    constructor(
-        @InjectRepository(User)
-        private userRepository: Repository<User>,
-        @InjectRepository(Transaction)
-        private transactionRepository: Repository<Transaction>,
-        @InjectRepository(Ticket)
-        private ticketRepository: Repository<Ticket>,
-        @InjectRepository(SiteVisit)
-        private siteVisitRepository: Repository<SiteVisit>,
-    ) { }
+  constructor(
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+    @InjectRepository(Transaction)
+    private transactionRepository: Repository<Transaction>,
+    @InjectRepository(Ticket)
+    private ticketRepository: Repository<Ticket>,
+    @InjectRepository(SiteVisit)
+    private siteVisitRepository: Repository<SiteVisit>,
+  ) {}
 
-    async getActivity(userId: string) {
-        return this.siteVisitRepository.find({
-            where: { userId },
-            order: { timestamp: 'DESC' },
-            take: 10
-        });
+  async getActivity(
+    userId: string,
+  ): Promise<{ page: string; timestamp: string; ip: string | null }[]> {
+    const visits = await this.siteVisitRepository.find({
+      where: { userId },
+      order: { timestamp: 'DESC' },
+      take: 10,
+      select: ['page', 'timestamp', 'ip'],
+    });
+    return visits.map((v) => ({
+      page: v.page,
+      timestamp:
+        v.timestamp instanceof Date
+          ? v.timestamp.toISOString()
+          : String(v.timestamp),
+      ip: v.ip ?? null,
+    }));
+  }
+
+  async getStats(userId: string) {
+    const transactions = await this.transactionRepository.find({
+      where: { user: { id: userId }, status: 'completed' },
+    });
+
+    const ticketCount = await this.ticketRepository.count({
+      where: { customer: { id: userId } },
+    });
+
+    const ltv = transactions.reduce((sum, t) => {
+      const amount = parseFloat(t.amount.replace(/[^0-9.-]+/g, ''));
+      return sum + (isNaN(amount) ? 0 : amount);
+    }, 0);
+
+    return {
+      ltv: ltv.toFixed(2),
+      orderCount: transactions.length,
+      ticketCount,
+    };
+  }
+
+  async create(userData: any): Promise<User> {
+    const existingUser = await this.userRepository.findOne({
+      where: { email: userData.email },
+    });
+    if (existingUser) {
+      throw new ConflictException('Email already exists');
     }
 
-    async getStats(userId: string) {
-        const transactions = await this.transactionRepository.find({
-            where: { user: { id: userId }, status: 'completed' }
-        });
+    const user = new User();
+    user.name = userData.name;
+    user.email = userData.email;
+    user.role = userData.role || 'Viewer';
+    user.phone = userData.phone || '';
+    user.isActive = true;
 
-        const ticketCount = await this.ticketRepository.count({
-            where: { customer: { id: userId } }
-        });
-
-        const ltv = transactions.reduce((sum, t) => {
-            const amount = parseFloat(t.amount.replace(/[^0-9.-]+/g, ""));
-            return sum + (isNaN(amount) ? 0 : amount);
-        }, 0);
-
-        return {
-            ltv: ltv.toFixed(2),
-            orderCount: transactions.length,
-            ticketCount
-        };
+    if (userData.password) {
+      user.password = await bcrypt.hash(userData.password, 10);
     }
 
-    async create(userData: any): Promise<User> {
-        const existingUser = await this.userRepository.findOne({ where: { email: userData.email } });
-        if (existingUser) {
-            throw new ConflictException('Email already exists');
-        }
+    const saved = await this.userRepository.save(user);
+    const {
+      password,
+      twoFactorSecret,
+      resetPasswordToken,
+      resetPasswordExpires,
+      googleId,
+      githubId,
+      ...safe
+    } = saved;
+    return safe as User;
+  }
 
-        const user = new User();
-        user.name = userData.name;
-        user.email = userData.email;
-        user.role = userData.role || 'Viewer';
-        user.phone = userData.phone || '';
-        user.isActive = true;
+  async findAll(
+    search?: string,
+    role?: string,
+    isActive?: boolean,
+  ): Promise<User[]> {
+    const where: any = {};
 
-        if (userData.password) {
-            user.password = await bcrypt.hash(userData.password, 10);
-        }
-
-        return this.userRepository.save(user);
+    if (role) {
+      where.role = role;
     }
 
-    async findAll(search?: string, role?: string, isActive?: boolean): Promise<User[]> {
-        const where: any = {};
-
-        if (role) {
-            where.role = role;
-        }
-
-        if (isActive !== undefined) {
-            where.isActive = isActive;
-        }
-
-        return this.userRepository.find({
-            where: search ? [
-                { ...where, name: Like(`%${search}%`) },
-                { ...where, email: Like(`%${search}%`) }
-            ] : where,
-            order: { createdAt: 'DESC' },
-        });
+    if (isActive !== undefined) {
+      where.isActive = isActive;
     }
 
-    async findOne(id: string): Promise<User> {
-        const user = await this.userRepository.findOne({ where: { id } });
-        if (!user) {
-            throw new NotFoundException(`User with ID ${id} not found`);
-        }
-        return user;
+    const list = await this.userRepository.find({
+      where: search
+        ? [
+            { ...where, name: Like(`%${search}%`) },
+            { ...where, email: Like(`%${search}%`) },
+          ]
+        : where,
+      order: { createdAt: 'DESC' },
+    });
+    return list.map((u) => {
+      const {
+        password,
+        twoFactorSecret,
+        resetPasswordToken,
+        resetPasswordExpires,
+        googleId,
+        githubId,
+        ...safe
+      } = u;
+      return safe as User;
+    });
+  }
+
+  async findOne(id: string): Promise<User> {
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
     }
+    const {
+      password,
+      twoFactorSecret,
+      resetPasswordToken,
+      resetPasswordExpires,
+      googleId,
+      githubId,
+      ...safe
+    } = user;
+    return safe as User;
+  }
 
-    async update(id: string, updateData: Partial<User>): Promise<User> {
-        const user = await this.findOne(id);
-
-        if (updateData.password) {
-            updateData.password = await bcrypt.hash(updateData.password, 10);
-        }
-
-        Object.assign(user, updateData);
-        return this.userRepository.save(user);
+  async update(id: string, updateData: Partial<User>): Promise<User> {
+    const existing = await this.userRepository.findOne({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException(`User with ID ${id} not found`);
     }
-
-    async remove(id: string): Promise<void> {
-        const user = await this.findOne(id);
-        await this.userRepository.remove(user);
+    if (updateData.password) {
+      (existing as any).password = await bcrypt.hash(updateData.password, 10);
     }
+    const { password: _p, ...rest } = updateData;
+    Object.assign(existing, rest);
+    const saved = await this.userRepository.save(existing);
+    const {
+      password,
+      twoFactorSecret,
+      resetPasswordToken,
+      resetPasswordExpires,
+      googleId,
+      githubId,
+      ...safe
+    } = saved;
+    return safe as User;
+  }
 
-    async toggleStatus(id: string): Promise<User> {
-        const user = await this.findOne(id);
-        user.isActive = !user.isActive;
-        return this.userRepository.save(user);
+  async remove(id: string): Promise<void> {
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
     }
+    await this.userRepository.remove(user);
+  }
+
+  async toggleStatus(id: string): Promise<User> {
+    const existing = await this.userRepository.findOne({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+    existing.isActive = !existing.isActive;
+    const saved = await this.userRepository.save(existing);
+    const {
+      password,
+      twoFactorSecret,
+      resetPasswordToken,
+      resetPasswordExpires,
+      googleId,
+      githubId,
+      ...safe
+    } = saved;
+    return safe as User;
+  }
 }

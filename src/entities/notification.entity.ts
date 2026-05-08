@@ -1,34 +1,43 @@
-
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { User } from './user.entity';
 
 @Entity('notifications')
 export class Notification {
-    @PrimaryGeneratedColumn('uuid')
-    id: string;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-    @Column()
-    type: string; // 'alert' | 'project' | 'team' | 'billing' | 'system'
+  @Column()
+  type: string; // 'alert' | 'project' | 'team' | 'billing' | 'system'
 
-    @Column()
-    title: string;
+  @Column()
+  title: string;
 
-    @Column('text')
-    description: string;
+  @Column('text')
+  description: string;
 
-    @Column({ default: false })
-    read: boolean;
+  @Column({ default: false })
+  read: boolean;
 
-    @Column({ default: false })
-    archived: boolean;
+  @Column({ default: false })
+  archived: boolean;
 
-    @Column({ default: 'normal' })
-    priority: string; // 'high' | 'normal' | 'low'
+  @Column({ default: 'normal' })
+  priority: string; // 'high' | 'normal' | 'low'
 
-    @CreateDateColumn()
-    createdAt: Date;
+  @Column({ nullable: true })
+  link: string; // optional action URL
 
-    @ManyToOne(() => User, { onDelete: 'CASCADE' })
-    @JoinColumn()
-    user: User;
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @ManyToOne(() => User, (user) => user.notifications, { onDelete: 'CASCADE' })
+  @JoinColumn()
+  user: User;
 }

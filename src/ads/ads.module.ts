@@ -5,9 +5,9 @@ import { AdsService } from './ads.service';
 import { Ad } from '../entities/ad.entity';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([Ad])],
-    controllers: [AdsController],
-    providers: [AdsService],
-    exports: [AdsService]
+  imports: [TypeOrmModule.forFeature([Ad])],
+  controllers: [AdsController],
+  providers: [AdsService],
+  exports: [AdsService],
 })
-export class AdsModule { }
+export class AdsModule {}

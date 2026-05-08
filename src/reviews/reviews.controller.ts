@@ -1,41 +1,67 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Req,
+} from '@nestjs/common';
 import { ReviewsService } from './reviews.service';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { UpdateReviewDto } from './dto/update-review.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
 
 @Controller('reviews')
 export class ReviewsController {
-    constructor(private readonly reviewsService: ReviewsService) { }
+  constructor(private readonly reviewsService: ReviewsService) {}
 
-    @Post()
-    @UseGuards(JwtAuthGuard)
-    create(@Body() createReviewDto: CreateReviewDto, @Req() req) {
-        return this.reviewsService.create(req.user.userId, createReviewDto);
-    }
+  @Post()
+  @UseGuards(JwtAuthGuard)
+  create(@Body() createReviewDto: CreateReviewDto, @Req() req) {
+    return this.reviewsService.create(req.user.id, createReviewDto);
+  }
 
-    @Get()
-    @UseGuards(JwtAuthGuard)
-    findAll(@Req() req) {
-        return this.reviewsService.findAll(req.user.userId);
-    }
+  @Get()
+  @UseGuards(JwtAuthGuard)
+  findAll(@Req() req) {
+    return this.reviewsService.findAll(req.user.id);
+  }
 
-    @Get(':productId')
-    getByProduct(@Param('productId') productId: string) {
-        return this.reviewsService.getByProduct(productId);
-    }
+  @Get('moderation')
+  @UseGuards(JwtAuthGuard)
+  getForModeration(@Req() req) {
+    return this.reviewsService.findAllPendingForModeration(
+      req.user.id,
+      req.user.role,
+    );
+  }
 
-    @Patch(':id')
-    @UseGuards(JwtAuthGuard)
-    update(@Param('id') id: string, @Body() updateReviewDto: UpdateReviewDto) {
-        return this.reviewsService.update(id, updateReviewDto);
-    }
+  @Get(':productId')
+  getByProduct(@Param('productId') productId: string) {
+    return this.reviewsService.getByProduct(productId);
+  }
 
-    @Delete(':id')
-    @UseGuards(JwtAuthGuard)
-    remove(@Param('id') id: string) {
-        return this.reviewsService.remove(id);
-    }
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard)
+  update(
+    @Param('id') id: string,
+    @Body() updateReviewDto: UpdateReviewDto,
+    @Req() req,
+  ) {
+    return this.reviewsService.update(
+      id,
+      updateReviewDto,
+      req.user.id,
+      req.user.role,
+    );
+  }
+
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard)
+  remove(@Param('id') id: string, @Req() req) {
+    return this.reviewsService.remove(id, req.user.id, req.user.role);
+  }
 }
