@@ -1,3 +1,6 @@
+// Import crypto polyfill first to ensure it's available before any other modules
+import './crypto-polyfill';
+
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, RequestMethod } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
