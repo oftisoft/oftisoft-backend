@@ -24,18 +24,17 @@ async function bootstrap() {
   app.use(cookieParser(configService.get('COOKIE_SECRET')));
 
   // CORS configuration - supports multiple origins
-  const frontendUrls = (
-    configService.get('FRONTEND_URL') || 'http://localhost:3000'
-  )
-    .split(',')
-    .map((url) => url.trim());
-
-  const allowedOrigins = [
-    ...frontendUrls,
-    'http://localhost:3000',
-    'http://localhost:3001',
-    'https://www.oftisoft.com',
-  ];
+  const corsOrigins = configService.get('CORS_ORIGINS');
+  const frontendUrl = configService.get('FRONTEND_URL') || 'http://localhost:3000';
+  
+  const allowedOrigins = corsOrigins
+    ? corsOrigins.split(',').map((url) => url.trim())
+    : [
+        frontendUrl,
+        'http://localhost:3000',
+        'http://localhost:3001',
+        'https://www.oftisoft.com',
+      ];
 
   app.enableCors({
     origin: allowedOrigins,
