@@ -104,7 +104,6 @@ import { AdminModule } from './admin/admin.module';
         username: configService.get('DATABASE_USER'),
         password: configService.get('DATABASE_PASSWORD'),
         database: configService.get('DATABASE_NAME'),
-<<<<<<< HEAD
         ssl: configService.get('DATABASE_SSLMODE') === 'require'
           ? { rejectUnauthorized: false }
           : false,
