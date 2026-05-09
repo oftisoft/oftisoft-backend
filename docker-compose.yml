@@ -2,20 +2,87 @@ version: "3.9"
 
 services:
   backend:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    image: oftisoft-backend:latest
     container_name: oftisoft-backend
 
-    restart: always
-
-    env_file:
-      - ./.env
-
-    environment:
-      - NODE_ENV=production
-      - PORT=5500
+    restart: unless-stopped
 
     ports:
       - "5500:5500"
+
+    environment:
+      # App
+      NODE_ENV: production
+      PORT: 5500
+      FRONTEND_URL: https://oftisoft.com
+      API_URL: https://api.oftisoft.com
+      TRUST_PROXY: "true"
+      SECURE_COOKIES: "true"
+
+      # Database
+      DATABASE_HOST: aws-1-ap-northeast-1.pooler.supabase.com
+      DATABASE_PORT: 5432
+      DATABASE_USER: postgres.zsyntkxjhzbldgehizav
+      DATABASE_PASSWORD: "Y%8NgQ&k@QkZ*.i"
+      DATABASE_NAME: postgres
+      DATABASE_SSLMODE: require
+      DATABASE_URL: postgresql://postgres.zsyntkxjhzbldgehizav:Y%258NgQ%26k%40QkZ%2A.i@aws-1-ap-northeast-1.pooler.supabase.com:5432/postgres
+
+      # JWT
+      JWT_ACCESS_SECRET: 857DsS857
+      JWT_REFRESH_SECRET: ffafCDCD
+      JWT_ACCESS_EXPIRATION: 15m
+      JWT_REFRESH_EXPIRATION: 7d
+
+      # Google OAuth
+      GOOGLE_CLIENT_ID: 125345315064-h6jv380nllhu1eel0sddri3d09hm91js.apps.googleusercontent.com
+      GOOGLE_CLIENT_SECRET: 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
+
+      # GitHub OAuth
+      GITHUB_CLIENT_ID: Ov23li4Wl4zmEQAYQQw3
+      GITHUB_CLIENT_SECRET: 61a98c2f8c2790746379d5640a68ee4033259602
+
+      # CORS
+      CORS_ORIGINS: https://oftisoft.com,https://www.oftisoft.com,http://localhost:3000,https://localhost:3000
+
+      # SSL
+      SSL_CERT_PATH: /app/ssl/cert.pem
+      SSL_KEY_PATH: /app/ssl/key.pem
+
+      # Firebase
+      FIREBASE_API_KEY: AIzaSyD897IFAChUyFHMFjqJRPJ6wS06jD30rBo
+      FIREBASE_AUTH_DOMAIN: oftisoft-296de.firebaseapp.com
+      FIREBASE_PROJECT_ID: oftisoft-296de
+      FIREBASE_STORAGE_BUCKET: oftisoft-296de.firebasestorage.app
+      FIREBASE_MESSAGING_SENDER_ID: 90188203025
+      FIREBASE_APP_ID: 1:90188203025:web:a092bed3c085a61e511db0
+      FIREBASE_MEASUREMENT_ID: G-FJLNL06KEN
+
+      # SMTP
+      SMTP_HOST: smtp.gmail.com
+      SMTP_PORT: 587
+      SMTP_USER: oftisoft@gmail.com
+      SMTP_PASS: iatcyiqshmpmwffu
+
+      # Stripe
+      STRIPE_SECRET_KEY: sk_test_51TOzNfGqa7a1zNTVk3b34tW9G1CYJIKtX5Zc7OEwGRAkFs02GKbN5Z3egNnllPv8HBOQv5OeGkUV7qbKC6L3ZRxK00VZ7u8uJ3
+      STRIPE_WEBHOOK_SECRET: whsec_...
+      STRIPE_PUBLISHABLE_KEY: pk_test_51TOzNfGqa7a1zNTVA8QgMxJRp94RwNAzHtb0g6qknizLspQJVoxahYtbUG5Nvd9d3UW8sFAFLWUE82YnBpegWNmD00co5qmfvv
+
+      # Cloudflare R2
+      AWS_ACCESS_KEY_ID: ebb0ce97bcf6d00430ea6334aed9266b
+      AWS_SECRET_ACCESS_KEY: e0b046e4ffa13143ffc00a4b933af1d7755f606e6ff66ce0daee069ce2f087ef
+      AWS_BUCKET: oftisoft
+      AWS_ENDPOINT: https://87247acc69a4f4cfa5fbd2f7da5bcd25.r2.cloudflarestorage.com
+      AWS_REGION: auto
+      AWS_USE_PATH_STYLE_ENDPOINT: "true"
+
+    volumes:
+      - ./ssl:/app/ssl:ro
 
     networks:
       - oftisoft-network
@@ -24,7 +91,7 @@ services:
     image: nginx:alpine
     container_name: oftisoft-nginx
 
-    restart: always
+    restart: unless-stopped
 
     ports:
       - "8090:80"
