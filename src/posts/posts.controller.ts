@@ -31,11 +31,8 @@ export class PostsController {
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
   ) {
-    // Default to published for public requests
-    const actualStatus = status || PostStatus.PUBLISHED;
-
     const result = await this.postsService.findAll({
-      status: actualStatus,
+      status,
       type,
       categoryId,
       tag,
@@ -149,5 +146,26 @@ export class PostsController {
   async like(@Param('id') id: string) {
     await this.postsService.incrementLikes(id);
     return { message: 'Liked' };
+  }
+
+  @Post(':id/duplicate')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SuperAdmin', 'Admin', 'Editor')
+  async duplicate(@Param('id') id: string, @Request() req: any) {
+    return this.postsService.duplicate(id, req.user.id);
+  }
+
+  @Put(':id/unpublish')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SuperAdmin', 'Admin', 'Editor')
+  async unpublish(@Param('id') id: string) {
+    return this.postsService.unpublish(id);
+  }
+
+  @Put(':id/restore')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SuperAdmin', 'Admin')
+  async restore(@Param('id') id: string) {
+    return this.postsService.restore(id);
   }
 }

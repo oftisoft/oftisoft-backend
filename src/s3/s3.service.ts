@@ -6,6 +6,7 @@ import {
   DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
@@ -44,7 +45,7 @@ export class S3Service {
 
     await this.s3Client.send(command);
 
-    const url = await this.getSignedUrl(key);
+    const url = this.getPublicUrl(key);
 
     return { url, key };
   }
@@ -108,5 +109,22 @@ export class S3Service {
   getPublicUrl(key: string): string {
     const endpoint = this.configService.get('AWS_ENDPOINT');
     return `${endpoint}/${this.bucket}/${key}`;
+  }
+
+  async listFiles(folder: string = 'uploads'): Promise<{ name: string; url: string; key: string; size: number; lastModified: Date }[]> {
+    const command = new ListObjectsV2Command({
+      Bucket: this.bucket,
+      Prefix: folder.endsWith('/') ? folder : `${folder}/`,
+    });
+
+    const response = await this.s3Client.send(command);
+
+    return (response.Contents || []).map((item) => ({
+      name: item.Key?.split('/').pop() || '',
+      key: item.Key || '',
+      url: this.getPublicUrl(item.Key || ''),
+      size: item.Size || 0,
+      lastModified: item.LastModified || new Date(),
+    }));
   }
 }

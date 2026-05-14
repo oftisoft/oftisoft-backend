@@ -13,6 +13,7 @@ import {
   UnauthorizedException,
   UseInterceptors,
   UploadedFile,
+  Logger,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -41,6 +42,8 @@ import { EmailService } from './email.service';
 
 @Controller('auth')
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
+
   constructor(
     private authService: AuthService,
     private configService: ConfigService,
@@ -76,7 +79,7 @@ export class AuthController {
         token,
       );
     } catch (error) {
-      console.error('Failed to send verification email:', error);
+      this.logger.error('Failed to send verification email', error instanceof Error ? error.stack : String(error));
       // Don't fail registration if email fails
     }
 
