@@ -42,6 +42,14 @@ export class ContentController {
     return this.contentService.getAllFiles();
   }
 
+  @Get('media')
+  @UseGuards(JwtAuthGuard)
+  async listMedia() {
+    const files = await this.s3Service.listFiles('content');
+    const sorted = files.sort((a, b) => b.lastModified.getTime() - a.lastModified.getTime());
+    return sorted.slice(0, 100);
+  }
+
   @Get('pages')
   @UseGuards(JwtAuthGuard)
   getAllPages() {

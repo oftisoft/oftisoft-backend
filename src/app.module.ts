@@ -2,85 +2,42 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
-import { User } from './entities/user.entity';
-import { RefreshToken } from './entities/refresh-token.entity';
-import { Ticket } from './entities/ticket.entity';
-import { TicketMessage } from './entities/ticket-message.entity';
-import { PaymentMethod } from './entities/payment-method.entity';
-import { Transaction } from './entities/transaction.entity';
-import { SystemConfig } from './entities/system-config.entity';
-import { ApiKey } from './entities/api-key.entity';
-import { EmailTemplate } from './entities/email-template.entity';
 import { SupportModule } from './support/support.module';
 import { BillingModule } from './billing/billing.module';
 import { SystemModule } from './system/system.module';
 import { UsersModule } from './users/users.module';
-import { ServeStaticModule } from '@nestjs/serve-static';
-import { join } from 'path';
 import { DownloadsModule } from './downloads/downloads.module';
-import { Product } from './entities/product.entity';
-import { UserAsset } from './entities/user-asset.entity';
-import { DownloadRecord } from './entities/download-record.entity';
-import { UpdateNotification } from './entities/update-notification.entity';
-import { ProductVersion } from './entities/product-version.entity';
 import { FavoritesModule } from './favorites/favorites.module';
-import { Favorite } from './entities/favorite.entity';
 import { MarketingModule } from './marketing/marketing.module';
-import { Coupon } from './entities/coupon.entity';
-import { Bundle } from './entities/bundle.entity';
-import { SubscriptionPlan } from './entities/subscription-plan.entity';
 import { MessagesModule } from './messages/messages.module';
-import { Conversation } from './entities/conversation.entity';
-import { Message } from './entities/message.entity';
 import { NotificationsModule } from './notifications/notifications.module';
-import { Notification } from './entities/notification.entity';
 import { OrdersModule } from './orders/orders.module';
-import { Order } from './entities/order.entity';
-import { OrderItem } from './entities/order-item.entity';
 import { ProductsModule } from './products/products.module';
 import { CategoriesModule } from './categories/categories.module';
-import { Category } from './entities/category.entity';
 import { ProjectsModule } from './projects/projects.module';
-import { Project } from './entities/project.entity';
 import { QuotesModule } from './quotes/quotes.module';
-import { Quote } from './entities/quote.entity';
 import { ContentModule } from './content/content.module';
-import { PageContent } from './entities/page-content.entity';
-import { Lead } from './entities/lead.entity';
 import { LeadModule } from './leads/leads.module';
-import { Ad } from './entities/ad.entity';
 import { AdsModule } from './ads/ads.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { AnalyticsModule } from './analytics/analytics.module';
-import { SiteVisit } from './entities/site-visit.entity';
-import { SiteEvent } from './entities/site-event.entity';
 import { AffiliateModule } from './affiliate/affiliate.module';
-import { Affiliate } from './entities/affiliate.entity';
-import { Review } from './entities/review.entity';
-import { AffiliateCommission } from './entities/affiliate-commission.entity';
-import { AffiliateWithdrawal } from './entities/affiliate-withdrawal.entity';
-import { FailedLoginAttempt } from './entities/failed-login-attempt.entity';
-import { EmailVerificationToken } from './entities/email-verification-token.entity';
-import { TaxRate } from './entities/tax-rate.entity';
-import { AuditLog } from './entities/audit-log.entity';
 import { WebsocketModule } from './websocket/websocket.module';
 import { AuditModule } from './audit/audit.module';
 import { BlogSeederModule } from './blog-seeder/blog-seeder.module';
 import { EventsModule } from './events/events.module';
-import { Event } from './entities/event.entity';
-import { EventRegistration } from './entities/event-registration.entity';
 import { CampaignsModule } from './campaigns/campaigns.module';
-import { Campaign } from './entities/campaign.entity';
 import { PostsModule } from './posts/posts.module';
-import { Post } from './entities/post.entity';
-import { Tag } from './entities/tag.entity';
-import { BlockedUser } from './entities/blocked-user.entity';
-import { Integration } from './entities/integration.entity';
+import { TagsModule } from './tags/tags.module';
 import { IntegrationsModule } from './integrations/integrations.module';
 import { AdminModule } from './admin/admin.module';
+import { HomeSectionsModule } from './home-sections/home-sections.module';
+import { CommentsModule } from './comments/comments.module';
 
 @Module({
   imports: [
@@ -107,9 +64,9 @@ import { AdminModule } from './admin/admin.module';
         ssl: configService.get('DATABASE_SSLMODE') === 'require'
           ? { rejectUnauthorized: false }
           : false,
-        entities: [User, RefreshToken, Ticket, TicketMessage, PaymentMethod, Transaction, SystemConfig, ApiKey, EmailTemplate, Product, UserAsset, DownloadRecord, UpdateNotification, ProductVersion, Favorite, Coupon, Bundle, SubscriptionPlan, Message, Conversation, Notification, Order, OrderItem, Category, Project, Quote, PageContent, Lead, Ad, Review, SiteVisit, SiteEvent, Affiliate, AffiliateCommission, AffiliateWithdrawal, FailedLoginAttempt, EmailVerificationToken, TaxRate, AuditLog, Event, EventRegistration, Campaign, Post, Tag, BlockedUser, Integration],
-        synchronize: configService.get('NODE_ENV') === 'development',
-        logging: false,
+        autoLoadEntities: true,
+        synchronize: false,
+        logging: configService.get('NODE_ENV') === 'development' ? ['error', 'warn'] : false,
       }),
       inject: [ConfigService],
     }),
@@ -145,8 +102,11 @@ import { AdminModule } from './admin/admin.module';
     EventsModule,
     CampaignsModule,
     PostsModule,
+    TagsModule,
     IntegrationsModule,
     AdminModule,
+    HomeSectionsModule,
+    CommentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

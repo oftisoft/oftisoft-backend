@@ -176,12 +176,51 @@ export class PostsService {
     return this.postRepository.save(post);
   }
 
+  async duplicate(id: string, authorId: string): Promise<Post> {
+    const original = await this.findOne(id);
+    const duplicateData: Partial<Post> = {
+      title: `${original.title} (Copy)`,
+      slug: `${original.slug}-copy-${Date.now()}`,
+      content: original.content,
+      excerpt: original.excerpt,
+      type: original.type,
+      status: PostStatus.DRAFT,
+      featuredImage: original.featuredImage,
+      featuredImageAlt: original.featuredImageAlt,
+      categoryId: original.categoryId,
+      seoTitle: original.seoTitle,
+      seoDescription: original.seoDescription,
+      canonicalUrl: original.canonicalUrl,
+      isIndexed: original.isIndexed,
+      authorId,
+    };
+    const tagNames = original.tags?.map((t) => t.name) || [];
+    return this.create(duplicateData, tagNames);
+  }
+
+  async unpublish(id: string): Promise<Post> {
+    const post = await this.findOne(id);
+    post.status = PostStatus.DRAFT;
+    post.publishedAt = null as any;
+    return this.postRepository.save(post);
+  }
+
+  async restore(id: string): Promise<Post> {
+    const post = await this.findOne(id);
+    post.status = PostStatus.DRAFT;
+    return this.postRepository.save(post);
+  }
+
   async incrementViews(id: string): Promise<void> {
     await this.postRepository.increment({ id }, 'views', 1);
   }
 
   async incrementLikes(id: string): Promise<void> {
     await this.postRepository.increment({ id }, 'likes', 1);
+  }
+
+  async incrementComments(id: string): Promise<void> {
+    await this.postRepository.increment({ id }, 'comments', 1);
   }
 
   async getFeatured(): Promise<Post[]> {
