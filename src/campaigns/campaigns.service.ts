@@ -1,13 +1,17 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Campaign, CampaignStatus } from '../entities/campaign.entity';
+import { Campaign, CampaignStatus, CampaignType } from '../entities/campaign.entity';
+import { EmailService } from '../auth/email.service';
+import { LeadService } from '../leads/leads.service';
 
 @Injectable()
 export class CampaignsService {
   constructor(
     @InjectRepository(Campaign)
     private campaignRepository: Repository<Campaign>,
+    private emailService: EmailService,
+    private leadService: LeadService,
   ) {}
 
   async create(campaignData: Partial<Campaign>): Promise<Campaign> {
@@ -128,6 +132,95 @@ export class CampaignsService {
       totalSpent: campaigns.reduce((sum, c) => sum + Number(c.spent), 0),
       avgROAS: this.calculateAvgROAS(campaigns),
     };
+  }
+
+  async sendCampaignEmails(campaignId: string): Promise<{ sent: number; failed: number }> {
+    const campaign = await this.findOne(campaignId);
+    const leads = await this.leadService.findAll();
+
+    let sent = 0;
+    let failed = 0;
+
+    for (const lead of leads) {
+      try {
+        const subject = campaign.content?.subject || campaign.name;
+        const body = campaign.content?.body || '';
+        await this.emailService.sendCustomEmail(lead.email, subject, body);
+        sent++;
+      } catch {
+        failed++;
+      }
+    }
+
+    await this.updateMetrics(campaignId, {
+      impressions: (campaign.metrics?.impressions || 0) + sent,
+    });
+
+    return { sent, failed };
+  }
+
+  async scheduleCampaign(campaignId: string, scheduledDate: Date): Promise<Campaign> {
+    const campaign = await this.findOne(campaignId);
+    campaign.status = CampaignStatus.SCHEDULED;
+    campaign.startDate = scheduledDate;
+    return this.campaignRepository.save(campaign);
+  }
+
+  async executeCampaign(campaignId: string): Promise<Campaign> {
+    const campaign = await this.findOne(campaignId);
+
+    if (
+      campaign.status !== CampaignStatus.SCHEDULED &&
+      campaign.status !== CampaignStatus.ACTIVE
+    ) {
+      throw new BadRequestException(
+        'Campaign must be in SCHEDULED or ACTIVE status to execute',
+      );
+    }
+
+    campaign.status = CampaignStatus.ACTIVE;
+
+    switch (campaign.type) {
+      case CampaignType.EMAIL: {
+        const result = await this.sendCampaignEmails(campaignId);
+        campaign.metrics = {
+          ...campaign.metrics,
+          impressions: (campaign.metrics?.impressions || 0) + result.sent,
+        } as any;
+        break;
+      }
+      case CampaignType.SOCIAL:
+        campaign.metrics = {
+          ...campaign.metrics,
+          impressions: (campaign.metrics?.impressions || 0) + 100,
+        } as any;
+        break;
+      case CampaignType.PPC:
+      case CampaignType.CONTENT:
+      case CampaignType.AFFILIATE:
+      case CampaignType.REFERRAL:
+        break;
+    }
+
+    return this.campaignRepository.save(campaign);
+  }
+
+  async sendTestEmail(
+    campaignId: string,
+    testEmail: string,
+  ): Promise<{ message: string }> {
+    const campaign = await this.findOne(campaignId);
+
+    const subject = campaign.content?.subject || campaign.name;
+    const body = campaign.content?.body || '';
+
+    await this.emailService.sendCustomEmail(
+      testEmail,
+      `[TEST] ${subject}`,
+      body,
+    );
+
+    return { message: `Test email sent to ${testEmail}` };
   }
 
   private calculateAvgROAS(campaigns: Campaign[]): number {

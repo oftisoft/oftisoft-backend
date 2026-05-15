@@ -290,6 +290,10 @@ export class BillingService {
     return this.getFinanceConfig();
   }
 
+  async saveUser(user: User): Promise<User> {
+    return this.userRepository.save(user);
+  }
+
   // Helper method to seed initial data if none exists
   async seedInitialData(user: User): Promise<void> {
     const pmCount = await this.paymentMethodRepository.count({

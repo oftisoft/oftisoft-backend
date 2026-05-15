@@ -19,6 +19,7 @@ import { S3Module } from '../s3/s3.module';
 import { EmailVerificationService } from './email-verification.service';
 import { AccountLockoutService } from './account-lockout.service';
 import { EmailLoginController } from './email-login.controller';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { EmailLoginController } from './email-login.controller';
       inject: [ConfigService],
     }),
     S3Module,
+    UsersModule,
   ],
   controllers: [AuthController, EmailLoginController],
   providers: [
@@ -54,6 +56,6 @@ import { EmailLoginController } from './email-login.controller';
     GoogleStrategy,
     GithubStrategy,
   ],
-  exports: [AuthService],
+  exports: [AuthService, EmailService],
 })
 export class AuthModule {}

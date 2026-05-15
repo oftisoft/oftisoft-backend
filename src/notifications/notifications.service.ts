@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification } from '../entities/notification.entity';
 import { User } from '../entities/user.entity';
+import { FcmService } from './fcm.service';
 
 @Injectable()
 export class NotificationsService {
@@ -11,6 +12,7 @@ export class NotificationsService {
     private repo: Repository<Notification>,
     @InjectRepository(User)
     private usersRepo: Repository<User>,
+    private fcmService: FcmService,
   ) {}
 
   async getUserNotifications(userId: string) {
@@ -114,6 +116,20 @@ export class NotificationsService {
     const user = await this.usersRepo.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');
     const notif = this.repo.create({ ...dto, user });
-    return this.repo.save(notif);
+    const saved = await this.repo.save(notif);
+    if (user.pushNotifications && dto.title) {
+      this.fcmService
+        .sendToUser(userId, dto.title, dto.description || dto.title)
+        .catch(() => {});
+    }
+    return saved;
+  }
+
+  async sendPush(userId: string, title: string, body: string) {
+    return this.create(userId, {
+      type: 'alert',
+      title,
+      description: body,
+    });
   }
 }

@@ -410,6 +410,29 @@ The Oftisoft Team
     return info;
   }
 
+  async sendCustomEmail(
+    to: string,
+    subject: string,
+    html: string,
+    text?: string,
+  ) {
+    const mailOptions = {
+      from: '"Oftisoft Campaigns" <campaigns@oftisoft.com>',
+      to,
+      subject,
+      html,
+      text,
+    };
+
+    const info = await this.transporter.sendMail(mailOptions);
+
+    if (this.configService.get('NODE_ENV') !== 'production') {
+      console.log('Preview URL: %s', nodemailer.getTestMessageUrl(info));
+    }
+
+    return info;
+  }
+
   async sendLoginOtpEmail(email: string, otp: string) {
     const mailOptions = {
       from: '"Oftisoft Security" <security@oftisoft.com>',

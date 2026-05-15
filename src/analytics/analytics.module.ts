@@ -8,6 +8,7 @@ import { Order } from '../entities/order.entity';
 import { OrderItem } from '../entities/order-item.entity';
 import { User } from '../entities/user.entity';
 import { Project } from '../entities/project.entity';
+import { CacheModule } from '../cache/cache.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { Project } from '../entities/project.entity';
       User,
       Project,
     ]),
+    CacheModule,
   ],
   controllers: [AnalyticsController],
   providers: [AnalyticsService],

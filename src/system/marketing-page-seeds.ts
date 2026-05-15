@@ -173,7 +173,7 @@ export const MARKETING_PAGE_SEEDS: MarketingPageSeed[] = [
         {
           id: 'projects',
           label: 'Projects delivered',
-          value: '150+',
+          value: '500+',
           icon: 'Zap',
         },
         {
@@ -191,7 +191,7 @@ export const MARKETING_PAGE_SEEDS: MarketingPageSeed[] = [
         bioPar2: `${brandName} was started to help companies ship practical products with less friction. We care about code quality, clear content, and a user experience that feels calm and credible.`,
         stats: [
           { num: 6, label: 'Years', suffix: '+' },
-          { num: 150, label: 'Projects', suffix: '+' },
+          { num: 500, label: 'Projects', suffix: '+' },
           { num: 80, label: 'Clients', suffix: '+' },
         ],
         socials: {
@@ -599,7 +599,7 @@ export const MARKETING_PAGE_SEEDS: MarketingPageSeed[] = [
         secondaryCTA: { text: 'View services', link: '/services' },
         imageAlt: 'A clean modern digital product interface on a large screen',
         stats: [
-          { value: 150, suffix: '+', label: 'Projects delivered' },
+          { value: 500, suffix: '+', label: 'Projects delivered' },
           { value: 98, suffix: '%', label: 'Client satisfaction' },
           { value: 6, suffix: '+', label: 'Years experience' },
         ],
@@ -1507,7 +1507,7 @@ export const MARKETING_PAGE_SEEDS: MarketingPageSeed[] = [
         {
           id: 'info-3',
           title: 'Phone',
-          value: '+880 1410-615665',
+          value: '+8801757220402',
           iconName: 'Phone',
           color: 'text-green-500',
           order: 3,
@@ -1515,7 +1515,7 @@ export const MARKETING_PAGE_SEEDS: MarketingPageSeed[] = [
         {
           id: 'info-4',
           title: 'WhatsApp',
-          value: '+880 1410-615665',
+          value: '+8801757220402',
           iconName: 'MessageCircle',
           color: 'text-green-500',
           order: 4,

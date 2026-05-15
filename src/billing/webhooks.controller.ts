@@ -18,15 +18,16 @@ import { Order } from '../entities/order.entity';
 import { Transaction } from '../entities/transaction.entity';
 import { User } from '../entities/user.entity';
 import { EmailService } from '../auth/email.service';
+import { StripeService } from './stripe.service';
 
 @Controller('webhooks')
 export class WebhooksController {
-  private stripe: Stripe;
   private readonly logger = new Logger(WebhooksController.name);
 
   constructor(
     private configService: ConfigService,
     private emailService: EmailService,
+    private stripeService: StripeService,
     @InjectRepository(Order)
     private orderRepository: Repository<Order>,
     @InjectRepository(Transaction)
@@ -34,14 +35,7 @@ export class WebhooksController {
     @InjectRepository(User)
     private userRepository: Repository<User>,
     private dataSource: DataSource,
-  ) {
-    const secretKey =
-      this.configService.get('STRIPE_SECRET_KEY') ||
-      'dummy_key_for_initialization';
-    this.stripe = new Stripe(secretKey, {
-      apiVersion: '2026-01-28.clover' as any,
-    });
-  }
+  ) {}
 
   @Post('stripe')
   @HttpCode(HttpStatus.OK)
@@ -54,25 +48,16 @@ export class WebhooksController {
     const endpointSecret =
       this.configService.get('STRIPE_WEBHOOK_SECRET') || '';
 
-    // Re-initialize Stripe with actual key for webhook verification
-    const actualSecretKey =
-      this.configService.get('STRIPE_SECRET_KEY') || 'dummy_key';
-    this.stripe = new Stripe(actualSecretKey, {
-      apiVersion: '2026-01-28.clover' as any,
-    });
-
     let event: Stripe.Event;
 
     try {
       if (endpointSecret) {
-        event = this.stripe.webhooks.constructEvent(
+        event = this.stripeService.constructWebhookEvent(
           payload,
           signature,
           endpointSecret,
         );
       } else {
-        // SECURITY WARNING: No webhook secret configured
-        // In production, always verify webhooks with signature
         this.logger.warn(
           'No STRIPE_WEBHOOK_SECRET configured. Webhook signature verification skipped.',
         );
@@ -80,8 +65,6 @@ export class WebhooksController {
           'This is insecure in production. Please set STRIPE_WEBHOOK_SECRET environment variable.',
         );
 
-        // In development mode only, we can parse without verification
-        // But log a clear warning
         if (process.env.NODE_ENV === 'production') {
           throw new BadRequestException(
             'Webhook secret not configured. Cannot verify webhook signature in production.',
@@ -101,49 +84,54 @@ export class WebhooksController {
 
     this.logger.log('Received Stripe webhook:', event.type);
 
-    // Handle the event
     switch (event.type) {
       case 'payment_intent.succeeded':
-        await this.handlePaymentIntentSucceeded(event.data.object);
+        await this.handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent);
         break;
 
       case 'payment_intent.payment_failed':
-        await this.handlePaymentIntentFailed(event.data.object);
+        await this.handlePaymentIntentFailed(event.data.object as Stripe.PaymentIntent);
         break;
 
       case 'invoice.paid':
-        await this.handleInvoicePaid(event.data.object);
+        await this.handleInvoicePaid(event.data.object as Stripe.Invoice);
         break;
 
       case 'invoice.payment_failed':
-        await this.handleInvoicePaymentFailed(event.data.object);
+        await this.handleInvoicePaymentFailed(event.data.object as Stripe.Invoice);
         break;
 
       case 'customer.subscription.created':
-        await this.handleSubscriptionCreated(event.data.object);
+        await this.handleSubscriptionCreated(event.data.object as Stripe.Subscription);
         break;
 
       case 'customer.subscription.updated':
-        await this.handleSubscriptionUpdated(event.data.object);
+        await this.handleSubscriptionUpdated(event.data.object as Stripe.Subscription);
+        break;
+
+      case 'customer.subscription.deleted':
+        await this.handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
         break;
 
       case 'charge.refunded':
-        await this.handleChargeRefunded(event.data.object);
+        await this.handleChargeRefunded(event.data.object as Stripe.Charge);
         break;
 
       default:
-        console.log(`Unhandled event type: ${event.type}`);
+        this.logger.log(`Unhandled event type: ${event.type}`);
     }
 
     res.json({ received: true });
   }
 
-  private async handlePaymentIntentSucceeded(
-    paymentIntent: Stripe.PaymentIntent,
-  ) {
+  private async handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent) {
     this.logger.log('PaymentIntent was successful:', paymentIntent.id);
 
-    // Update order status
+    await this.transactionRepository.update(
+      { stripePaymentIntentId: paymentIntent.id },
+      { status: 'completed' },
+    );
+
     if (paymentIntent.metadata?.orderId) {
       const order = await this.orderRepository.findOne({
         where: { id: paymentIntent.metadata.orderId },
@@ -151,24 +139,21 @@ export class WebhooksController {
       });
 
       if (order) {
-        // Use transaction for atomic order status update and transaction creation
         await this.dataSource.transaction(async (manager) => {
           order.status = 'completed';
           await manager.save(order);
 
-          // Create transaction record
           const transaction = manager.create(Transaction, {
             invoiceId: `INV-${Date.now()}`,
             amount: `$${(paymentIntent.amount / 100).toFixed(2)}`,
             type: 'Payment',
             status: 'completed',
             user: order.user,
+            stripePaymentIntentId: paymentIntent.id,
           });
-
           await manager.save(transaction);
         });
 
-        // Send order confirmation email (outside transaction)
         if (order.user) {
           try {
             await this.emailService.sendOrderConfirmationEmail(
@@ -191,6 +176,11 @@ export class WebhooksController {
   private async handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent) {
     this.logger.log('PaymentIntent failed:', paymentIntent.id);
 
+    await this.transactionRepository.update(
+      { stripePaymentIntentId: paymentIntent.id },
+      { status: 'failed' },
+    );
+
     if (paymentIntent.metadata?.orderId) {
       const order = await this.orderRepository.findOne({
         where: { id: paymentIntent.metadata.orderId },
@@ -198,20 +188,18 @@ export class WebhooksController {
       });
 
       if (order) {
-        // Use transaction for atomic order status update and transaction creation
         await this.dataSource.transaction(async (manager) => {
           order.status = 'cancelled';
           await manager.save(order);
 
-          // Create failed transaction record
           const transaction = manager.create(Transaction, {
             invoiceId: `INV-${Date.now()}`,
             amount: `$${(paymentIntent.amount / 100).toFixed(2)}`,
             type: 'Payment Failed',
             status: 'failed',
             user: order.user,
+            stripePaymentIntentId: paymentIntent.id,
           });
-
           await manager.save(transaction);
         });
 
@@ -220,33 +208,163 @@ export class WebhooksController {
     }
   }
 
-  private async handleInvoicePaid(invoice: Stripe.Invoice) {
+  private async handleInvoicePaid(invoice: any) {
     this.logger.log('Invoice paid:', invoice.id);
-    // Handle subscription invoice payment
+
+    const subscriptionId = invoice.parent?.subscription_details?.subscription;
+
+    if (subscriptionId && invoice.customer) {
+      const customerId = typeof invoice.customer === 'string'
+        ? invoice.customer
+        : invoice.customer.id;
+
+      const user = await this.userRepository.findOne({
+        where: { stripeCustomerId: customerId },
+      });
+
+      if (user) {
+        user.subscriptionStatus = 'active';
+        await this.userRepository.save(user);
+
+        const pi = invoice.payment_intent;
+        const paymentIntentId = pi
+          ? typeof pi === 'string' ? pi : pi.id
+          : undefined;
+
+        const transaction = this.transactionRepository.create({
+          invoiceId: `INV-${Date.now()}`,
+          amount: `$${(invoice.amount_paid / 100).toFixed(2)}`,
+          type: 'Subscription Payment',
+          status: 'completed',
+          user,
+          stripePaymentIntentId: paymentIntentId,
+        });
+        await this.transactionRepository.save(transaction);
+
+        this.logger.log(`User ${user.id} subscription payment confirmed`);
+      }
+    }
   }
 
-  private async handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
+  private async handleInvoicePaymentFailed(invoice: any) {
     this.logger.log('Invoice payment failed:', invoice.id);
-    // Handle failed subscription payment
+
+    const subscriptionId = invoice.parent?.subscription_details?.subscription;
+
+    if (subscriptionId && invoice.customer) {
+      const customerId = typeof invoice.customer === 'string'
+        ? invoice.customer
+        : invoice.customer.id;
+
+      const user = await this.userRepository.findOne({
+        where: { stripeCustomerId: customerId },
+      });
+
+      if (user) {
+        user.subscriptionStatus = 'past_due';
+        await this.userRepository.save(user);
+
+        const transaction = this.transactionRepository.create({
+          invoiceId: `INV-${Date.now()}`,
+          amount: `$${(invoice.amount_due / 100).toFixed(2)}`,
+          type: 'Subscription Payment Failed',
+          status: 'failed',
+          user,
+        });
+        await this.transactionRepository.save(transaction);
+
+        this.logger.log(`User ${user.id} subscription payment failed`);
+      }
+    }
   }
 
   private async handleSubscriptionCreated(subscription: Stripe.Subscription) {
     this.logger.log('Subscription created:', subscription.id);
-    // Handle new subscription
+
+    const customerId = typeof subscription.customer === 'string'
+      ? subscription.customer
+      : subscription.customer.id;
+
+    const user = await this.userRepository.findOne({
+      where: { stripeCustomerId: customerId },
+    });
+
+    if (user) {
+      user.subscriptionStatus = subscription.status;
+      await this.userRepository.save(user);
+      this.logger.log(`User ${user.id} subscription status: ${subscription.status}`);
+    }
   }
 
   private async handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     this.logger.log('Subscription updated:', subscription.id);
-    // Handle subscription update
+
+    const customerId = typeof subscription.customer === 'string'
+      ? subscription.customer
+      : subscription.customer.id;
+
+    const user = await this.userRepository.findOne({
+      where: { stripeCustomerId: customerId },
+    });
+
+    if (user) {
+      user.subscriptionStatus = subscription.status;
+      await this.userRepository.save(user);
+      this.logger.log(`User ${user.id} subscription updated: ${subscription.status}`);
+    }
+  }
+
+  private async handleSubscriptionDeleted(subscription: Stripe.Subscription) {
+    this.logger.log('Subscription deleted:', subscription.id);
+
+    const customerId = typeof subscription.customer === 'string'
+      ? subscription.customer
+      : subscription.customer.id;
+
+    const user = await this.userRepository.findOne({
+      where: { stripeCustomerId: customerId },
+    });
+
+    if (user) {
+      user.subscriptionPlan = 'Starter';
+      user.subscriptionStatus = 'canceled';
+      await this.userRepository.save(user);
+      this.logger.log(`User ${user.id} subscription cancelled`);
+    }
   }
 
   private async handleChargeRefunded(charge: Stripe.Charge) {
     this.logger.log('Charge refunded:', charge.id);
 
-    // Find transaction by searching for related order
-    // Note: Since Transaction doesn't have stripePaymentIntentId, we'll log this
-    this.logger.log(
-      `Refund processed for charge: ${charge.id}, amount: ${charge.amount_refunded / 100}`,
-    );
+    const paymentIntentId = typeof charge.payment_intent === 'string'
+      ? charge.payment_intent
+      : charge.payment_intent?.id;
+
+    if (paymentIntentId) {
+      const refundedAmount = charge.amount_refunded / 100;
+      const transaction = await this.transactionRepository.findOne({
+        where: { stripePaymentIntentId: paymentIntentId },
+        relations: ['user'],
+      });
+
+      if (transaction) {
+        const refundTransaction = this.transactionRepository.create({
+          invoiceId: `RFND-${Date.now()}`,
+          amount: `$${refundedAmount.toFixed(2)}`,
+          type: 'Refund',
+          status: 'completed',
+          user: transaction.user,
+        });
+        await this.transactionRepository.save(refundTransaction);
+
+        this.logger.log(
+          `Refund of $${refundedAmount} for payment ${paymentIntentId} recorded`,
+        );
+      } else {
+        this.logger.warn(
+          `No local transaction found for payment intent ${paymentIntentId}`,
+        );
+      }
+    }
   }
 }

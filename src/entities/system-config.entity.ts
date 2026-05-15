@@ -57,6 +57,28 @@ export class SystemConfig {
   @Column({ default: false })
   financeSandboxMode: boolean;
 
+  // Invoice customization
+  @Column({ type: 'text', nullable: true })
+  invoiceLogo: string;
+
+  @Column({ default: 'Oftisoft' })
+  invoiceCompanyName: string;
+
+  @Column({ default: 'support@oftisoft.com' })
+  invoiceEmail: string;
+
+  @Column({ type: 'text', nullable: true })
+  invoiceAddress: string;
+
+  @Column({ type: 'text', nullable: true })
+  invoiceFooter: string;
+
+  @Column({ default: '#6366f1' })
+  invoiceAccentColor: string;
+
+  @Column({ default: '#0f172a' })
+  invoiceHeaderBg: string;
+
   @UpdateDateColumn()
   updatedAt: Date;
 }

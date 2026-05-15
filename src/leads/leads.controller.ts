@@ -7,17 +7,36 @@ import {
   Param,
   Delete,
   UseGuards,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { LeadService } from './leads.service';
 import { LeadStatus } from '../entities/lead.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { Lead } from '../entities/lead.entity';
+import { SubscribeDto } from './dto/subscribe.dto';
+import { PartnerApplicationDto } from './dto/partner-application.dto';
 
 @Controller('leads')
 export class LeadController {
   constructor(private readonly leadService: LeadService) {}
+
+  @Post('subscribe')
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  @HttpCode(HttpStatus.CREATED)
+  subscribe(@Body() dto: SubscribeDto) {
+    return this.leadService.subscribe(dto);
+  }
+
+  @Post('partner-application')
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  @HttpCode(HttpStatus.CREATED)
+  partnerApplication(@Body() dto: PartnerApplicationDto) {
+    return this.leadService.createPartnerApplication(dto);
+  }
 
   @Post()
   create(@Body() data: any): Promise<Lead> {

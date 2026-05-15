@@ -31,5 +31,8 @@ export class Transaction {
   createdAt: Date;
 
   @Column({ nullable: true })
+  stripePaymentIntentId: string;
+
+  @Column({ nullable: true })
   dueAt: Date;
 }

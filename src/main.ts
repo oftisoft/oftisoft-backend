@@ -1,19 +1,23 @@
-// Import crypto polyfill first to ensure it's available before any other modules
 import './crypto-polyfill';
 
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, RequestMethod } from '@nestjs/common';
+import { ValidationPipe, RequestMethod, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
+import * as csurf from 'csurf';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
+  const logger = new Logger('Bootstrap');
+
   const app = await NestFactory.create(AppModule);
 
   const configService = app.get(ConfigService);
+  const isProduction = configService.get('NODE_ENV') === 'production';
+  const cookieSecret = configService.get('COOKIE_SECRET');
 
   // Security middleware
   app.use(
@@ -21,14 +25,29 @@ async function bootstrap() {
       crossOriginResourcePolicy: { policy: 'cross-origin' },
     }),
   );
-  app.use(cookieParser(configService.get('COOKIE_SECRET')));
+  app.use(cookieParser(cookieSecret));
 
-  // CORS configuration - supports multiple origins
+  // CSRF protection (skip for API routes that use token auth)
+  if (isProduction && cookieSecret) {
+    app.use(
+      csurf({
+        cookie: {
+          httpOnly: true,
+          secure: true,
+          sameSite: 'strict',
+          key: '_csrf',
+        },
+        value: (req: any) => req.headers['x-csrf-token'] || req.headers['xsrf-token'],
+      }),
+    );
+  }
+
+  // CORS configuration
   const corsOrigins = configService.get('CORS_ORIGINS');
   const frontendUrl = configService.get('FRONTEND_URL') || 'http://localhost:3000';
-  
+
   const allowedOrigins = corsOrigins
-    ? corsOrigins.split(',').map((url) => url.trim())
+    ? corsOrigins.split(',').map((url: string) => url.trim())
     : [
         frontendUrl,
         'http://localhost:3000',
@@ -48,6 +67,8 @@ async function bootstrap() {
       'X-Requested-With',
       'Accept',
       'X-Client-Version',
+      'X-CSRF-Token',
+      'XSRF-Token',
     ],
   });
 
@@ -84,11 +105,35 @@ async function bootstrap() {
   // Setup Socket.io
   app.useWebSocketAdapter(new IoAdapter(app));
 
+  // Graceful shutdown hooks
+  app.enableShutdownHooks();
+
   const port = configService.get('PORT') || 5000;
   await app.listen(port, '0.0.0.0');
 
-  console.log(`🚀 Backend server running on http://localhost:${port}`);
-  console.log(`📡 API available at http://localhost:${port}/api`);
-  console.log(`📚 API Documentation at http://localhost:${port}/api/docs`);
+  logger.log(`Backend server running on http://localhost:${port}`);
+  logger.log(`API available at http://localhost:${port}/api`);
+  logger.log(`API Documentation at http://localhost:${port}/api/docs`);
+
+  // Handle process signals
+  process.on('SIGTERM', async () => {
+    logger.log('SIGTERM received. Shutting down gracefully...');
+    await app.close();
+    process.exit(0);
+  });
+
+  process.on('SIGINT', async () => {
+    logger.log('SIGINT received. Shutting down gracefully...');
+    await app.close();
+    process.exit(0);
+  });
+
+  process.on('uncaughtException', (error) => {
+    logger.error(`Uncaught Exception: ${error.message}`, error.stack);
+  });
+
+  process.on('unhandledRejection', (reason: any) => {
+    logger.error(`Unhandled Rejection: ${reason?.message || reason}`);
+  });
 }
 bootstrap();

@@ -5,10 +5,10 @@ import { User } from '../entities/user.entity';
 import { Product } from '../entities/product.entity';
 import { Project } from '../entities/project.entity';
 import { Category } from '../entities/category.entity';
-import { PageContent } from '../entities/page-content.entity';
 import { Conversation } from '../entities/conversation.entity';
 import { Message } from '../entities/message.entity';
-import { MARKETING_PAGE_SEEDS } from './marketing-page-seeds';
+import { SubscriptionPlan } from '../entities/subscription-plan.entity';
+import { Portfolio } from '../entities/portfolio.entity';
 import * as bcrypt from 'bcrypt';
 
 const bcryptSafe = bcrypt as unknown as {
@@ -28,12 +28,14 @@ export class SeederService {
     private projectRepo: Repository<Project>,
     @InjectRepository(Category)
     private categoryRepo: Repository<Category>,
-    @InjectRepository(PageContent)
-    private pageContentRepo: Repository<PageContent>,
     @InjectRepository(Conversation)
     private conversationRepo: Repository<Conversation>,
     @InjectRepository(Message)
     private messageRepo: Repository<Message>,
+    @InjectRepository(SubscriptionPlan)
+    private subscriptionPlanRepo: Repository<SubscriptionPlan>,
+    @InjectRepository(Portfolio)
+    private portfolioRepo: Repository<Portfolio>,
   ) {}
 
   /**
@@ -361,28 +363,220 @@ export class SeederService {
     await this.seedCategories();
     await this.seedProducts();
     await this.seedProjects();
-    await this.seedPageContent();
     await this.seedConversations();
+
+    await this.seedSubscriptionPlans();
+    await this.seedPortfolio();
 
     this.logger.log('Database Synthesis Complete.');
   }
 
+  private async seedSubscriptionPlans() {
+    const plans = [
+      {
+        name: 'Starter',
+        price: 29,
+        interval: 'month',
+        description: 'Best for one-page sites or a small content refresh.',
+        features: [
+          'Homepage rewrite',
+          'SEO title and description',
+          'One content revision',
+          'Basic image text guidance',
+          'Email support',
+        ],
+        buttonText: 'Choose Starter',
+        iconName: 'Zap',
+        color: 'text-blue-500',
+        bgColor: 'bg-blue-500/10',
+        activeSubscribers: 0,
+        isActive: true,
+      },
+      {
+        name: 'Growth',
+        price: 99,
+        interval: 'month',
+        description: 'Best for multi-page sites and blog-ready content systems.',
+        features: [
+          'Full marketing page set',
+          'Blog structure and SEO fields',
+          'Image text descriptions',
+          'Priority revision round',
+          'Content planning support',
+          'Launch checklist',
+        ],
+        buttonText: 'Choose Growth',
+        iconName: 'Sparkles',
+        color: 'text-purple-500',
+        bgColor: 'bg-purple-500/10',
+        activeSubscribers: 0,
+        isActive: true,
+      },
+      {
+        name: 'Custom',
+        price: 299,
+        interval: 'month',
+        description:
+          'Best for teams that want a full content and website rollout.',
+        features: [
+          'Complete website rewrite',
+          'Custom page architecture',
+          'SEO and content audit',
+          'Ongoing update support',
+          'Priority communication',
+          'Long-term content roadmap',
+        ],
+        buttonText: 'Request Quote',
+        iconName: 'Crown',
+        color: 'text-orange-500',
+        bgColor: 'bg-orange-500/10',
+        activeSubscribers: 0,
+        isActive: true,
+      },
+    ];
+
+    for (const plan of plans) {
+      const existing = await this.subscriptionPlanRepo.findOne({
+        where: { name: plan.name },
+      });
+      if (!existing) {
+        await this.subscriptionPlanRepo.save(
+          this.subscriptionPlanRepo.create(plan),
+        );
+      }
+    }
+    this.logger.log('Subscription Plans: Seeded');
+  }
+
+  private async seedPortfolio() {
+    const admin = await this.userRepo.findOne({ where: { role: 'Admin' } });
+
+    const items = [
+      {
+        title: 'EcoSmart E-commerce',
+        slug: 'ecosmart-ecommerce',
+        category: 'Ecommerce',
+        client: 'EcoLife Inc.',
+        description: 'A sustainable fashion marketplace with real-time inventory.',
+        longDescription: 'EcoSmart is a pioneering e-commerce platform dedicated to sustainable fashion. We engineered a real-time inventory system using Redis and developed a personalized recommendation engine that increased conversion rates by 40%.',
+        image: 'https://images.unsplash.com/photo-1523474253062-5e4ead0d166d?q=80&w=800&auto=format&fit=crop',
+        tags: ['Next.js', 'Stripe', 'Tailwind', 'Redis'],
+        gradient: 'from-emerald-500/20 to-teal-500/20',
+        stats: JSON.stringify([{ label: 'ROI', value: '250%' }, { label: 'Sales', value: '$2M+' }]),
+        featured: true,
+        status: 'published',
+        order: 1,
+        userId: admin?.id,
+      },
+      {
+        title: 'FinTech Analytics Core',
+        slug: 'fintech-analytics-core',
+        category: 'Enterprise',
+        client: 'FinanceFlow',
+        description: 'High-performance dashboard processing millions of transactions.',
+        longDescription: 'Built for high-frequency trading firms, this dashboard visualizes millions of data points in real-time without rendering lag. Utilizes WebWorkers and canvas-based rendering for maximum performance.',
+        image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=800&auto=format&fit=crop',
+        tags: ['React', 'D3.js', 'Node.js', 'GraphQL'],
+        gradient: 'from-blue-600/20 to-indigo-600/20',
+        stats: JSON.stringify([{ label: 'Latency', value: '<50ms' }, { label: 'Users', value: '50k' }]),
+        featured: true,
+        status: 'published',
+        order: 2,
+        userId: admin?.id,
+      },
+      {
+        title: 'Nexus AI Assistant',
+        slug: 'nexus-ai-assistant',
+        category: 'AI',
+        client: 'TechHelp',
+        description: 'Customer service automation handling 80% of inquiries.',
+        longDescription: 'A context-aware AI agent that integrates with existing helpdesk categories. It uses RAG (Retrieval Augmented Generation) to provide accurate answers based on company knowledge bases.',
+        image: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?q=80&w=800&auto=format&fit=crop',
+        tags: ['Python', 'LangChain', 'FastAPI', 'Pinecone'],
+        gradient: 'from-purple-600/20 to-pink-600/20',
+        stats: JSON.stringify([{ label: 'Automation', value: '80%' }, { label: 'Cost Saving', value: '40%' }]),
+        featured: true,
+        status: 'published',
+        order: 3,
+        userId: admin?.id,
+      },
+      {
+        title: 'Nomad Travel App',
+        slug: 'nomad-travel-app',
+        category: 'Mobile',
+        client: 'GoTravel',
+        description: 'Cross-platform mobile app for offline travel planning.',
+        longDescription: 'Designed for digital nomads, this app features robust offline-first architecture. Syncs data automatically when connection is restored, ensuring seamless travel planning in remote areas.',
+        image: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?q=80&w=800&auto=format&fit=crop',
+        tags: ['React Native', 'Firebase', 'Google Maps'],
+        gradient: 'from-orange-500/20 to-yellow-500/20',
+        stats: JSON.stringify([{ label: 'Downloads', value: '100k+' }, { label: 'Rating', value: '4.8' }]),
+        featured: false,
+        status: 'published',
+        order: 4,
+        userId: admin?.id,
+      },
+      {
+        title: 'MediCare Portal',
+        slug: 'healthcare-portal',
+        category: 'Enterprise',
+        client: 'MediCare',
+        description: 'Secure patient management system for hospital networks.',
+        longDescription: 'A HIPAA-compliant platform connecting patients with doctors. Features end-to-end encryption for all medical records and a highly accessible UI for elderly patients.',
+        image: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?q=80&w=800&auto=format&fit=crop',
+        tags: ['Next.js', 'PostgreSQL', 'HIPAA', 'Docker'],
+        gradient: 'from-cyan-500/20 to-blue-500/20',
+        stats: JSON.stringify([{ label: 'Efficiency', value: '+45%' }, { label: 'Security', value: '100%' }]),
+        featured: false,
+        status: 'published',
+        order: 5,
+        userId: admin?.id,
+      },
+      {
+        title: 'Chronos Luxury',
+        slug: 'chronos-luxury',
+        category: 'Web',
+        client: 'Chronos',
+        description: 'Award-winning immersive 3D website for luxury watches.',
+        longDescription: 'To capturing the craftsmanship of luxury timepieces, we built a fully 3D interactive product showcase using Three.js and WebGL. The result is a showroom experience in the browser.',
+        image: 'https://images.unsplash.com/photo-1524592094714-0f0654e20314?q=80&w=800&auto=format&fit=crop',
+        tags: ['GSAP', 'Three.js', 'WebGL', 'Blender'],
+        gradient: 'from-amber-600/20 to-red-600/20',
+        stats: JSON.stringify([{ label: 'Traffic', value: '500k' }, { label: 'Awards', value: '3' }]),
+        featured: false,
+        status: 'published',
+        order: 6,
+        userId: admin?.id,
+      },
+    ];
+
+    for (const item of items) {
+      const existing = await this.portfolioRepo.findOne({
+        where: { slug: item.slug },
+      });
+      if (!existing) {
+        await this.portfolioRepo.save(
+          this.portfolioRepo.create(item),
+        );
+      }
+    }
+    this.logger.log('Portfolio Items: Seeded');
+  }
+
   async shouldRunSeed(): Promise<boolean> {
-    const [userCount, categoryCount, productCount, projectCount, pageCount] =
+    const [userCount, categoryCount, productCount, projectCount] =
       await Promise.all([
         this.userRepo.count(),
         this.categoryRepo.count(),
         this.productRepo.count(),
         this.projectRepo.count(),
-        this.pageContentRepo.count(),
       ]);
 
     return (
       userCount === 0 &&
       categoryCount === 0 &&
       productCount === 0 &&
-      projectCount === 0 &&
-      pageCount === 0
+      projectCount === 0
     );
   }
 
@@ -733,36 +927,6 @@ export class SeederService {
       }
     }
     this.logger.log('Portfolio Nodes: Initialized');
-  }
-
-  private async seedPageContent() {
-    for (const page of MARKETING_PAGE_SEEDS) {
-      const content: Record<string, unknown> =
-        page.pageKey === 'blog'
-          ? { ...page.content, posts: this.getInitialBlogPosts() }
-          : page.content;
-
-      const existing = await this.pageContentRepo.findOne({
-        where: { pageKey: page.pageKey },
-      });
-
-      if (existing) {
-        existing.content = content;
-        existing.status = page.status;
-        existing.publishedAt = new Date();
-        await this.pageContentRepo.save(existing);
-      } else {
-        await this.pageContentRepo.save(
-          this.pageContentRepo.create({
-            ...page,
-            content,
-            publishedAt: new Date(),
-          }),
-        );
-      }
-    }
-
-    this.logger.log('Marketing pages seeded from revised content module.');
   }
 
   private async seedConversations() {

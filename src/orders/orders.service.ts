@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Order } from '../entities/order.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { User } from '../entities/user.entity';
+import { SystemConfig } from '../entities/system-config.entity';
 import PDFDocument from 'pdfkit';
 import { stringify } from 'csv-stringify';
 
@@ -14,6 +15,8 @@ export class OrdersService {
     private ordersRepository: Repository<Order>,
     @InjectRepository(User)
     private usersRepository: Repository<User>,
+    @InjectRepository(SystemConfig)
+    private configRepository: Repository<SystemConfig>,
   ) {}
 
   async create(userId: string, createOrderDto: CreateOrderDto): Promise<Order> {
@@ -86,6 +89,7 @@ export class OrdersService {
 
   async generateInvoice(userId: string, id: string): Promise<Buffer> {
     const order = await this.findOne(userId, id);
+    const config = await this.configRepository.findOne({ where: {} });
     const doc = new PDFDocument({ margin: 50 });
 
     return new Promise((resolve) => {
@@ -93,10 +97,23 @@ export class OrdersService {
       doc.on('data', buffers.push.bind(buffers));
       doc.on('end', () => resolve(Buffer.concat(buffers)));
 
-      // Header
+      // Customizable Header
+      const accentColor = config?.invoiceAccentColor || '#6366f1';
+      const headerBg = config?.invoiceHeaderBg || '#0f172a';
+
+      doc.rect(0, 0, 612, 80).fill(headerBg);
       doc
+        .fillColor('#ffffff')
+        .fontSize(22)
+        .text(config?.invoiceCompanyName || 'Oftisoft', 50, 25);
+      doc
+        .fontSize(14)
+        .text(`INVOICE`, 50, 55);
+
+      doc
+        .fillColor('#000000')
         .fontSize(20)
-        .text(`Invoice #${order.id.slice(0, 8)}`, { align: 'right' });
+        .text(`#${order.id.slice(0, 8)}`, { align: 'right' });
       doc
         .fontSize(10)
         .text(`Date: ${new Date(order.createdAt).toLocaleDateString()}`, {
@@ -118,11 +135,22 @@ export class OrdersService {
       }
       doc.moveDown();
 
-      // Table Header
-      doc.fontSize(10).text('Product', 50, 200);
-      doc.text('Qty', 300, 200);
-      doc.text('Price', 400, 200, { width: 90, align: 'right' });
-      doc.moveTo(50, 215).lineTo(550, 215).stroke();
+      // Company info
+      if (config?.invoiceEmail) {
+        doc.fontSize(8).text(`Email: ${config.invoiceEmail}`, { align: 'right' });
+      }
+      if (config?.invoiceAddress) {
+        doc.fontSize(8).text(config.invoiceAddress, { align: 'right' });
+      }
+      doc.moveDown();
+
+      // Table Header (with accent color)
+      const tableY = 200;
+      doc.rect(50, tableY - 5, 500, 20).fill(accentColor);
+      doc.fillColor('#ffffff').fontSize(10).text('Product', 60, tableY);
+      doc.text('Qty', 300, tableY);
+      doc.text('Price', 400, tableY, { width: 90, align: 'right' });
+      doc.fillColor('#000000');
 
       // Items
       let y = 230;
@@ -144,10 +172,20 @@ export class OrdersService {
       // Total
       doc
         .fontSize(14)
+        .fillColor(accentColor)
         .text(`Total: $${Number(order.total).toFixed(2)}`, 400, y + 30, {
           width: 90,
           align: 'right',
         });
+      doc.fillColor('#000000');
+
+      // Footer
+      if (config?.invoiceFooter) {
+        doc
+          .fontSize(8)
+          .fillColor('#666666')
+          .text(config.invoiceFooter, 50, 700, { align: 'center' });
+      }
 
       doc.end();
     });

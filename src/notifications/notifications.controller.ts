@@ -11,11 +11,16 @@ import {
 } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RegisterDeviceDto, UnregisterDeviceDto } from './dto/register-device.dto';
+import { FcmService } from './fcm.service';
 
 @Controller('notifications')
 @UseGuards(JwtAuthGuard)
 export class NotificationsController {
-  constructor(private readonly notificationsService: NotificationsService) {}
+  constructor(
+    private readonly notificationsService: NotificationsService,
+    private readonly fcmService: FcmService,
+  ) {}
 
   @Get()
   getNotifications(@Req() req) {
@@ -61,5 +66,15 @@ export class NotificationsController {
   @Delete(':id')
   delete(@Req() req, @Param('id') id: string) {
     return this.notificationsService.delete(req.user.userId, id);
+  }
+
+  @Post('register-device')
+  registerDevice(@Req() req, @Body() dto: RegisterDeviceDto) {
+    return this.fcmService.registerDevice(req.user.userId, dto.token, dto.platform);
+  }
+
+  @Post('unregister-device')
+  unregisterDevice(@Req() req, @Body() dto: UnregisterDeviceDto) {
+    return this.fcmService.unregisterDevice(req.user.userId, dto.token);
   }
 }

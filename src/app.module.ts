@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
@@ -6,6 +6,8 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { MaintenanceMiddleware } from './common/maintenance.middleware';
+import { SystemConfig } from './entities/system-config.entity';
 import { AuthModule } from './auth/auth.module';
 import { SupportModule } from './support/support.module';
 import { BillingModule } from './billing/billing.module';
@@ -21,7 +23,6 @@ import { ProductsModule } from './products/products.module';
 import { CategoriesModule } from './categories/categories.module';
 import { ProjectsModule } from './projects/projects.module';
 import { QuotesModule } from './quotes/quotes.module';
-import { ContentModule } from './content/content.module';
 import { LeadModule } from './leads/leads.module';
 import { AdsModule } from './ads/ads.module';
 import { ReviewsModule } from './reviews/reviews.module';
@@ -38,9 +39,19 @@ import { IntegrationsModule } from './integrations/integrations.module';
 import { AdminModule } from './admin/admin.module';
 import { HomeSectionsModule } from './home-sections/home-sections.module';
 import { CommentsModule } from './comments/comments.module';
+import { PortfolioModule } from './portfolio/portfolio.module';
+import { TeamMembersModule } from './team-members/team-members.module';
+import { TestimonialsModule } from './testimonials/testimonials.module';
+import { UploadModule } from './upload/upload.module';
+import { AiModule } from './ai/ai.module';
+import { AffiliateLinksModule } from './affiliate-links/affiliate-links.module';
+import { CacheModule } from './cache/cache.module';
+import { HealthModule } from './health/health.module';
+import { MonitoringModule } from './monitoring/monitoring.module';
 
 @Module({
   imports: [
+    TypeOrmModule.forFeature([SystemConfig]),
     ServeStaticModule.forRoot({
       rootPath: join(process.cwd(), 'uploads'),
       serveRoot: '/uploads',
@@ -65,7 +76,9 @@ import { CommentsModule } from './comments/comments.module';
           ? { rejectUnauthorized: false }
           : false,
         autoLoadEntities: true,
-        synchronize: false,
+        synchronize: configService.get('NODE_ENV') === 'development',
+        migrationsRun: configService.get('NODE_ENV') !== 'development',
+        migrations: [join(__dirname, '..', 'migrations', '*.{ts,js}')],
         logging: configService.get('NODE_ENV') === 'development' ? ['error', 'warn'] : false,
       }),
       inject: [ConfigService],
@@ -91,7 +104,6 @@ import { CommentsModule } from './comments/comments.module';
     CategoriesModule,
     ProjectsModule,
     QuotesModule,
-    ContentModule,
     LeadModule,
     AdsModule,
     ReviewsModule,
@@ -107,8 +119,21 @@ import { CommentsModule } from './comments/comments.module';
     AdminModule,
     HomeSectionsModule,
     CommentsModule,
+    PortfolioModule,
+    TeamMembersModule,
+    TestimonialsModule,
+    UploadModule,
+    AiModule,
+    AffiliateLinksModule,
+    CacheModule,
+    HealthModule,
+    MonitoringModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, MaintenanceMiddleware],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(MaintenanceMiddleware).forRoutes('*');
+  }
+}

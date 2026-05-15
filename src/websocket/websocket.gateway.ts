@@ -8,9 +8,10 @@ import {
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { JwtService } from '@nestjs/jwt';
 import { Message } from '../entities/message.entity';
 import { Conversation } from '../entities/conversation.entity';
 import { User } from '../entities/user.entity';
@@ -30,6 +31,7 @@ export class RealtimeGateway
   server: Server;
 
   private userSocketMap: Map<string, string> = new Map();
+  private authenticatedUsers: Map<string, { userId: string; name: string; role: string }> = new Map();
 
   constructor(
     @InjectRepository(Message)
@@ -40,6 +42,7 @@ export class RealtimeGateway
     private userRepository: Repository<User>,
     @InjectRepository(Notification)
     private notificationRepository: Repository<Notification>,
+    private jwtService: JwtService,
   ) {}
 
   handleConnection(client: Socket) {
@@ -53,6 +56,7 @@ export class RealtimeGateway
     for (const [userId, socketId] of this.userSocketMap.entries()) {
       if (socketId === client.id) {
         this.userSocketMap.delete(userId);
+        this.authenticatedUsers.delete(socketId);
         break;
       }
     }
@@ -60,33 +64,95 @@ export class RealtimeGateway
 
   @SubscribeMessage('authenticate')
   async handleAuthentication(
-    @MessageBody() data: { userId: string },
+    @MessageBody() data: { token?: string },
     @ConnectedSocket() client: Socket,
   ) {
-    const { userId } = data;
+    try {
+      let jwtToken = data?.token;
 
-    // Store user-socket mapping
-    this.userSocketMap.set(userId, client.id);
+      // Fallback: try to extract from cookies if not provided in message
+      if (!jwtToken) {
+        const cookie = client.handshake.headers.cookie || '';
+        const match = cookie.match(/access_token=([^;]+)/);
+        if (match) {
+          jwtToken = decodeURIComponent(match[1]);
+        }
+      }
 
-    // Join user's personal room for notifications
-    client.join(`user:${userId}`);
+      if (!jwtToken) {
+        return client.emit('auth_error', { message: 'No authentication token provided' });
+      }
 
-    console.log(`User ${userId} authenticated on socket ${client.id}`);
+      // Verify JWT token
+      const payload = await this.jwtService.verifyAsync(jwtToken);
+      const user = await this.userRepository.findOne({ where: { id: payload.sub } });
 
-    // Send unread notification count
-    const unreadCount = await this.notificationRepository.count({
-      where: { user: { id: userId }, read: false },
-    });
+      if (!user || !user.isActive) {
+        return client.emit('auth_error', { message: 'User not found or inactive' });
+      }
 
-    client.emit('unreadCount', { notifications: unreadCount });
+      if (
+        payload.tokenVersion !== undefined &&
+        user.tokenVersion !== payload.tokenVersion
+      ) {
+        return client.emit('auth_error', { message: 'Token invalidated. Please log in again.' });
+      }
+
+      const userId = user.id;
+
+      // Store user-socket mapping
+      this.userSocketMap.set(userId, client.id);
+      this.authenticatedUsers.set(client.id, {
+        userId,
+        name: user.name,
+        role: user.role,
+      });
+
+      // Join user's personal room for notifications
+      client.join(`user:${userId}`);
+
+      console.log(`User ${user.name} (${userId}) authenticated on socket ${client.id}`);
+
+      // Send unread notification count
+      const unreadCount = await this.notificationRepository.count({
+        where: { user: { id: userId }, read: false },
+      });
+
+      client.emit('authenticated', {
+        userId,
+        name: user.name,
+        unreadCount,
+      });
+
+      client.emit('unreadCount', { notifications: unreadCount });
+    } catch (error) {
+      return client.emit('auth_error', { message: 'Invalid or expired token' });
+    }
+  }
+
+  private getAuthenticatedUserId(client: Socket): string | null {
+    const auth = this.authenticatedUsers.get(client.id);
+    return auth ? auth.userId : null;
+  }
+
+  private requireAuth(client: Socket): string | null {
+    const userId = this.getAuthenticatedUserId(client);
+    if (!userId) {
+      client.emit('error', { message: 'Authentication required' });
+      return null;
+    }
+    return userId;
   }
 
   @SubscribeMessage('joinConversation')
   async handleJoinConversation(
-    @MessageBody() data: { conversationId: string; userId: string },
+    @MessageBody() data: { conversationId: string },
     @ConnectedSocket() client: Socket,
   ) {
-    const { conversationId, userId } = data;
+    const userId = this.requireAuth(client);
+    if (!userId) return;
+
+    const { conversationId } = data;
 
     // Verify user is part of the conversation
     const conversation = await this.conversationRepository.findOne({
@@ -131,12 +197,14 @@ export class RealtimeGateway
     @MessageBody()
     data: {
       conversationId: string;
-      senderId: string;
       content: string;
     },
     @ConnectedSocket() client: Socket,
   ) {
-    const { conversationId, senderId, content } = data;
+    const senderId = this.requireAuth(client);
+    if (!senderId) return;
+
+    const { conversationId, content } = data;
 
     // Get conversation with participants
     const conversation = await this.conversationRepository.findOne({
@@ -222,23 +290,28 @@ export class RealtimeGateway
   @SubscribeMessage('typing')
   handleTyping(
     @MessageBody()
-    data: { conversationId: string; userId: string; isTyping: boolean },
+    data: { conversationId: string; isTyping: boolean },
     @ConnectedSocket() client: Socket,
   ) {
+    const userId = this.requireAuth(client);
+    if (!userId) return;
+
     // Broadcast typing status to conversation (except sender)
     client.to(`conversation:${data.conversationId}`).emit('userTyping', {
-      userId: data.userId,
+      userId,
       isTyping: data.isTyping,
     });
   }
 
   @SubscribeMessage('markNotificationsRead')
   async handleMarkNotificationsRead(
-    @MessageBody() data: { userId: string },
     @ConnectedSocket() client: Socket,
   ) {
+    const userId = this.requireAuth(client);
+    if (!userId) return;
+
     await this.notificationRepository.update(
-      { user: { id: data.userId }, read: false },
+      { user: { id: userId }, read: false },
       { read: true },
     );
 

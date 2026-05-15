@@ -10,6 +10,17 @@ import { User } from '../entities/user.entity';
 import { Transaction } from '../entities/transaction.entity';
 import { Ticket } from '../entities/ticket.entity';
 import { SiteVisit } from '../entities/site-visit.entity';
+import { Order } from '../entities/order.entity';
+import { Review } from '../entities/review.entity';
+import { Message } from '../entities/message.entity';
+import { Notification } from '../entities/notification.entity';
+import { Favorite } from '../entities/favorite.entity';
+import { DownloadRecord } from '../entities/download-record.entity';
+import { Affiliate } from '../entities/affiliate.entity';
+import { AffiliateCommission } from '../entities/affiliate-commission.entity';
+import { AffiliateWithdrawal } from '../entities/affiliate-withdrawal.entity';
+import { Project } from '../entities/project.entity';
+import { Quote } from '../entities/quote.entity';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -23,6 +34,28 @@ export class UsersService {
     private ticketRepository: Repository<Ticket>,
     @InjectRepository(SiteVisit)
     private siteVisitRepository: Repository<SiteVisit>,
+    @InjectRepository(Order)
+    private orderRepository: Repository<Order>,
+    @InjectRepository(Review)
+    private reviewRepository: Repository<Review>,
+    @InjectRepository(Message)
+    private messageRepository: Repository<Message>,
+    @InjectRepository(Notification)
+    private notificationRepository: Repository<Notification>,
+    @InjectRepository(Favorite)
+    private favoriteRepository: Repository<Favorite>,
+    @InjectRepository(DownloadRecord)
+    private downloadRecordRepository: Repository<DownloadRecord>,
+    @InjectRepository(Affiliate)
+    private affiliateRepository: Repository<Affiliate>,
+    @InjectRepository(AffiliateCommission)
+    private affiliateCommissionRepository: Repository<AffiliateCommission>,
+    @InjectRepository(AffiliateWithdrawal)
+    private affiliateWithdrawalRepository: Repository<AffiliateWithdrawal>,
+    @InjectRepository(Project)
+    private projectRepository: Repository<Project>,
+    @InjectRepository(Quote)
+    private quoteRepository: Repository<Quote>,
   ) {}
 
   async getActivity(
@@ -200,5 +233,138 @@ export class UsersService {
       ...safe
     } = saved;
     return safe as User;
+  }
+
+  async exportUserData(userId: string): Promise<any> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: {
+        orders: { items: true },
+        tickets: true,
+        reviews: true,
+        notifications: true,
+        favorites: true,
+        downloadRecords: true,
+        projects: true,
+        quotes: true,
+        transactions: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    const messages = await this.messageRepository.find({
+      where: { sender: { id: userId } },
+    });
+
+    const affiliate = await this.affiliateRepository.findOne({
+      where: { user: { id: userId } },
+    });
+
+    let affiliateCommissions: AffiliateCommission[] = [];
+    let affiliateWithdrawals: AffiliateWithdrawal[] = [];
+    if (affiliate) {
+      affiliateCommissions = await this.affiliateCommissionRepository.find({
+        where: { affiliate: { id: affiliate.id } },
+      });
+      affiliateWithdrawals = await this.affiliateWithdrawalRepository.find({
+        where: { affiliate: { id: affiliate.id } },
+      });
+    }
+
+    const {
+      password,
+      twoFactorSecret,
+      resetPasswordToken,
+      resetPasswordExpires,
+      googleId,
+      githubId,
+      tokenVersion,
+      ...safeUser
+    } = user;
+
+    return {
+      exportedAt: new Date().toISOString(),
+      userId: user.id,
+      profile: safeUser,
+      orders: user.orders || [],
+      supportTickets: user.tickets || [],
+      reviews: user.reviews || [],
+      messages,
+      notifications: user.notifications || [],
+      favorites: user.favorites || [],
+      downloads: user.downloadRecords || [],
+      projects: user.projects || [],
+      quotes: user.quotes || [],
+      transactions: user.transactions || [],
+      affiliate: affiliate
+        ? {
+            ...affiliate,
+            commissions: affiliateCommissions,
+            withdrawals: affiliateWithdrawals,
+          }
+        : null,
+    };
+  }
+
+  async requestAccountDeletion(userId: string): Promise<{ message: string }> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    const randomSuffix = Math.random().toString(36).substring(2, 10);
+    user.name = 'Deleted User';
+    user.email = `deleted-${randomSuffix}-${Date.now()}@anonymized.com`;
+    user.phone = '';
+    user.address = '';
+    user.city = '';
+    user.state = '';
+    user.zipCode = '';
+    user.unit = '';
+    user.jobTitle = '';
+    user.bio = '';
+    user.avatarUrl = '';
+    user.isActive = false;
+    user.deletionRequestedAt = new Date();
+
+    await this.userRepository.save(user);
+
+    await this.notificationRepository.delete({ user: { id: userId } });
+    await this.favoriteRepository.delete({ user: { id: userId } });
+
+    return { message: 'Account deletion requested. Your data will be retained for 30 days before permanent removal.' };
+  }
+
+  async cancelDeletionRequest(userId: string): Promise<{ message: string }> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    if (!user.deletionRequestedAt) {
+      throw new BadRequestException('No deletion request found for this account');
+    }
+
+    const daysSinceRequest = Math.floor(
+      (Date.now() - user.deletionRequestedAt.getTime()) / (1000 * 60 * 60 * 24),
+    );
+
+    if (daysSinceRequest >= 30) {
+      throw new BadRequestException(
+        'The 30-day grace period has expired. Your data has been permanently anonymized.',
+      );
+    }
+
+    user.deletionRequestedAt = null;
+    user.isActive = true;
+    user.name = 'Deleted User';
+    user.email = `restored-${Math.random().toString(36).substring(2, 10)}-${Date.now()}@anonymized.com`;
+
+    await this.userRepository.save(user);
+
+    return { message: 'Deletion request cancelled. Please update your profile information.' };
   }
 }

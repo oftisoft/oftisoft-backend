@@ -7,10 +7,12 @@ import { BlockedUser } from '../entities/blocked-user.entity';
 import { MessagesService } from './messages.service';
 import { MessagesController } from './messages.controller';
 import { AIResponderService } from './ai-responder.service';
+import { AiModule } from '../ai/ai.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Conversation, Message, User, BlockedUser]),
+    AiModule,
   ],
   controllers: [MessagesController],
   providers: [MessagesService, AIResponderService],

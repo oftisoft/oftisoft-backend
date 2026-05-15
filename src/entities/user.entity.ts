@@ -23,6 +23,8 @@ import { ApiKey } from './api-key.entity';
 import { BlockedUser } from './blocked-user.entity';
 import { EmailVerificationToken } from './email-verification-token.entity';
 import { Product } from './product.entity';
+import { Portfolio } from './portfolio.entity';
+import { DeviceToken } from './device-token.entity';
 
 @Entity('users')
 export class User {
@@ -136,6 +138,9 @@ export class User {
   @Column({ default: 'Viewer' })
   role: string; // 'SuperAdmin' | 'Admin' | 'Editor' | 'Support' | 'Viewer'
 
+  @Column({ nullable: true })
+  stripeCustomerId: string;
+
   @Column({ default: 'Starter' })
   subscriptionPlan: string; // 'Starter' | 'Pro' | 'Business'
 
@@ -195,6 +200,15 @@ export class User {
 
   @OneToMany(() => Product, (product) => product.vendor)
   products: Product[];
+
+  @OneToMany(() => Portfolio, (portfolio) => portfolio.user)
+  portfolios: Portfolio[];
+
+  @OneToMany(() => DeviceToken, (deviceToken) => deviceToken.user)
+  deviceTokens: DeviceToken[];
+
+  @Column({ type: 'timestamp', nullable: true })
+  deletionRequestedAt: Date | null;
 
   @CreateDateColumn()
   createdAt: Date;

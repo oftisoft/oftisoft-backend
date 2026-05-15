@@ -39,6 +39,7 @@ import { Throttle } from '@nestjs/throttler';
 import { S3Service } from '../s3/s3.service';
 import { EmailVerificationService } from './email-verification.service';
 import { EmailService } from './email.service';
+import { UsersService } from '../users/users.service';
 
 @Controller('auth')
 export class AuthController {
@@ -50,6 +51,7 @@ export class AuthController {
     private s3Service: S3Service,
     private emailVerificationService: EmailVerificationService,
     private emailService: EmailService,
+    private usersService: UsersService,
   ) {}
 
   @Post('register')
@@ -192,6 +194,24 @@ export class AuthController {
     return this.authService.revokeAllTokens(user.id);
   }
 
+  // ============ Profile Endpoints ============
+
+  @Get('profile')
+  @UseGuards(JwtAuthGuard)
+  async getProfile(@GetUser() user: User) {
+    return this.usersService.findOne(user.id);
+  }
+
+  @Post('profile')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async updateProfile(
+    @GetUser() user: User,
+    @Body() updateProfileDto: UpdateProfileDto,
+  ) {
+    return this.usersService.update(user.id, updateProfileDto);
+  }
+
   @Get('check')
   @UseGuards(JwtAuthGuard)
   async checkAuth(@GetUser() user: User) {
@@ -311,5 +331,54 @@ export class AuthController {
     const frontendUrl =
       this.configService.get('FRONTEND_URL') || 'http://localhost:3000';
     res.redirect(`${frontendUrl}/dashboard`);
+  }
+
+  // ============ GDPR Data Export ============
+
+  @Get('export-data')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async exportData(
+    @GetUser() user: User,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const data = await this.usersService.exportUserData(user.id);
+    res.set({
+      'Content-Type': 'application/json',
+      'Content-Disposition': 'attachment; filename="my-oftisoft-data.json"',
+    });
+    return data;
+  }
+
+  // ============ Account Deletion ============
+
+  @Post('delete-account')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async deleteAccount(
+    @GetUser() user: User,
+    @Res({ passthrough: true }) res: Response,
+    @Req() req: Request,
+  ) {
+    const result = await this.usersService.requestAccountDeletion(user.id);
+    await this.authService.revokeAllTokens(user.id);
+    const isProduction =
+      this.configService.get<string>('NODE_ENV') === 'production';
+    const cookieOptions = {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? ('strict' as const) : ('lax' as const),
+      path: '/',
+    };
+    res.clearCookie('access_token', cookieOptions);
+    res.clearCookie('refresh_token', cookieOptions);
+    return result;
+  }
+
+  @Post('cancel-deletion')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async cancelDeletion(@GetUser() user: User) {
+    return this.usersService.cancelDeletionRequest(user.id);
   }
 }

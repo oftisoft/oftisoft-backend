@@ -6,11 +6,14 @@ import { User } from '../entities/user.entity';
 import { AuditLog } from '../entities/audit-log.entity';
 import { Notification } from '../entities/notification.entity';
 import { AuditService } from '../audit/audit.service';
-import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Product, User, AuditLog, Notification])],
+  imports: [
+    TypeOrmModule.forFeature([Product, User, AuditLog, Notification]),
+    NotificationsModule,
+  ],
   controllers: [AdminProductsController],
-  providers: [AuditService, NotificationsService],
+  providers: [AuditService],
 })
 export class AdminModule {}

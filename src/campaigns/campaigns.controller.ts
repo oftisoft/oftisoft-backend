@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
   Request,
+  BadRequestException,
 } from '@nestjs/common';
 import { CampaignsService } from './campaigns.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -119,5 +120,25 @@ export class CampaignsController {
   @Roles('SuperAdmin', 'Admin', 'Editor')
   async updateMetrics(@Param('id') id: string, @Body() metrics: any) {
     return this.campaignsService.updateMetrics(id, metrics);
+  }
+
+  @Post(':id/execute')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SuperAdmin', 'Admin', 'Editor')
+  async execute(@Param('id') id: string) {
+    return this.campaignsService.executeCampaign(id);
+  }
+
+  @Post(':id/send-test')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SuperAdmin', 'Admin', 'Editor')
+  async sendTest(
+    @Param('id') id: string,
+    @Body('email') email: string,
+  ) {
+    if (!email) {
+      throw new BadRequestException('Email is required');
+    }
+    return this.campaignsService.sendTestEmail(id, email);
   }
 }

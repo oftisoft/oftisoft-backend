@@ -9,10 +9,11 @@ import { User } from '../entities/user.entity';
 import { Product } from '../entities/product.entity';
 import { Project } from '../entities/project.entity';
 import { Category } from '../entities/category.entity';
-import { PageContent } from '../entities/page-content.entity';
 import { SeederService } from './seeder.service';
 import { Conversation } from '../entities/conversation.entity';
 import { Message } from '../entities/message.entity';
+import { SubscriptionPlan } from '../entities/subscription-plan.entity';
+import { Portfolio } from '../entities/portfolio.entity';
 import { AuditModule } from '../audit/audit.module';
 
 import { SystemPublicController } from './system-public.controller';
@@ -27,9 +28,10 @@ import { SystemPublicController } from './system-public.controller';
       Product,
       Project,
       Category,
-      PageContent,
       Conversation,
       Message,
+      SubscriptionPlan,
+      Portfolio,
     ]),
     AuditModule,
   ],
