@@ -19,6 +19,7 @@ services:
 
     environment:
       # App
+      DSS: ${DSS}
       NODE_ENV: ${NODE_ENV}
       PORT: ${PORT}
       FRONTEND_URL: ${FRONTEND_URL}
